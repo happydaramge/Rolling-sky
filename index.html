@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>롤링 스카이</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--ink:#fff;--bg:#7fb3e8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ink:#fff;--bg:#7fb3e8}}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;font-weight:700;overflow:hidden;touch-action:none;user-select:none}
+canvas{display:block;width:100%;height:100%}
+#hud{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);padding:14px 18px;display:flex;gap:14px;align-items:center;pointer-events:none}
+#bar{flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.35);overflow:hidden}
+#fill{height:100%;width:0;background:#fff;border-radius:5px}
+#gems{font-size:18px;min-width:76px;text-align:right;text-shadow:0 1px 3px rgba(0,0,0,.25)}
+#ov{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;background:rgba(40,60,110,.42);padding:24px}
+#ov h1{margin:0;font-size:clamp(40px,10vw,68px);color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.2)}
+#ov p{margin:0;font-size:16px;line-height:1.7;max-width:30em;color:#fff}
+#go{font:inherit;font-size:21px;padding:13px 44px;border:0;border-radius:40px;color:#fff;background:#ff7a59;cursor:pointer;box-shadow:0 4px 0 #d85a3b}
+#go:focus-visible{outline:3px solid #fff;outline-offset:3px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><div id="bar"><div id="fill"></div></div><div id="gems">◆ 0/20</div></div>
+<div id="ov"><h1 id="t">롤링 스카이</h1><p id="m">드래그(또는 ← → / A D)로 좌우 이동<br>색이 다른 점프칸을 밟으면 자동으로 점프!<br>어두운 칸에는 하늘에서 가시가 떨어져요<br>보석 20개를 모으며 끝까지 가세요</p><button id="go">시작</button></div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+let W,H,dpr;
+function rs(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',rs);rs();
+
+const N=420,GEMS=20,JV=10.5,GR=32,AIRT=.66,SY=.9,SR=.9,HY=1.5;
+function spd(z){return Math.min(13.5+z*.013,21)}
+let R=[],seed=7,lf=1;
+function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// 한 줄(row)에 장애물을 칸(tile) 단위로 배치: 빈 칸은 항상 1~2개
+// 한 줄 장애물: 빈 칸 1~2개, 나머지는 가시/낮은 블록/높은 벽이 섞여서 막고 있다
+let TW=4,SL=-2,LZ=[],FX=[];
+const lx=q=>q-(TW-1)/2;
+function pick(ex,n){const a=[];for(let q=0;q<TW;q++)if(q!==ex)a.push(q);a.sort(()=>rnd()-.5);return a.slice(0,Math.min(n,a.length))}
+// 한 줄 장애물: 빈 칸 1~3개, 막힌 칸은 이어진 구간마다 같은 종류(가시/낮은 블록/높은 기둥)라서 서로 붙지 않는다
+function mk(g){
+  // 직전(8줄 이내) 장애물 줄의 기둥 뒤쪽 칸은 가려져서 안 보이므로 가시를 놓지 않는다
+  const PB=new Set();
+  for(let j=g-1;j>=Math.max(0,g-8);j--){if(R[j].obs){R[j].obs.forEach(o=>{if(o.t==='b')PB.add(o.x)});break}}
+  const far=rnd()<.25?3:2,free=new Set();
+  lf=clamp(lf+Math.floor(rnd()*(2*far+1))-far,0,TW-1);free.add(lf);
+  if(TW>=4&&rnd()<.15)free.add(lf<TW-1?lf+1:lf-1);
+  const o=[];let run=[];
+  const flush=()=>{
+    if(!run.length)return;
+    const hid=run.some(j=>PB.has(lx(j)));
+    const t=(!hid&&rnd()<.4)?{t:'s',h:1}:(rnd()<.45?{t:'b',h:1}:{t:'b',h:1.8});
+    run.forEach(j=>o.push({x:lx(j),t:t.t,h:t.h}));run=[];
+  };
+  for(let j=0;j<TW;j++){if(free.has(j))flush();else run.push(j)}
+  flush();
+  return o;
+}
+// 휘어지는 벽 복도: 2칸 폭 통로가 구간마다 좌우로 한 칸씩 움직인다
+function wallRun(g){
+  let f=Math.floor(rnd()*(TW-1));
+  const segs=2+Math.floor(rnd()*2);
+  for(let s=0;s<segs;s++){
+    const L=1+Math.floor(rnd()*2);
+    for(let j=0;j<L;j++){const o=[];for(let q=0;q<TW;q++)if(q!==f&&q!==f+1)o.push({x:lx(q),t:'b',h:1.8,lg:true});R[g++].obs=o}
+    f=clamp(f+(rnd()<.5?-1:1),0,TW-2);g++;
+  }
+  lf=f;return g;
+}
+// 관문: 한 칸만 뚫린 벽이 연속으로, 뚫린 칸이 매번 달라진다
+function gates(g){
+  const n=2+Math.floor(rnd()*3);
+  for(let k=0;k<n;k++){
+    if(g>N-24)break;
+    lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
+    for(let j=0;j<2;j++)R[g++].obs=[...Array(TW).keys()].filter(q=>q!==lf).map(q=>({x:lx(q),t:'b',h:1.8,lg:true}));
+    g+=Math.max(3,Math.round(spd(g)*.2));
+  }
+  return g;
+}
+// 가시 비: 줄마다 떨어지는 칸 수(1~3)와 위치가 제각각, 안전한 칸은 항상 있다
+function rain(g){
+  const n=1+Math.floor(rnd()*3);
+  for(let k=0;k<n;k++){
+    if(g>N-24)break;
+    lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
+    R[g].drops=pick(lf,1+Math.floor(rnd()*3)).map(q=>({x:lx(q),y:9,st:0}));
+    g+=Math.max(3,Math.round(spd(g)*.2));
+  }
+  return g;
+}
+// 레이저포: 발사블럭이 줄 맨 앞에 있고, 공이 1.5칸 전에 오면 그 줄 앞쪽 전체로 빔을 쏜다
+function lasers(g){
+  let L=14+Math.floor(rnd()*9);L=Math.min(L,N-22-g);if(L<8)return N;
+  lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
+  pick(lf,1+Math.floor(rnd()*3)).forEach(q=>{
+    const o={x:lx(q),s:g,e:g+L-1,st:0,f:g};LZ.push(o);
+    for(let j=g;j<g+L;j++)(R[j].lz=R[j].lz||[]).push(o);
+  });
+  return g+L;
+}
+// 내려찍는 망치: 표시된 한 칸을 때린다
+function slams(g){
+  const n=1+Math.floor(rnd()*3);
+  for(let k=0;k<n;k++){
+    if(g>N-24)break;
+    lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
+    R[g].hams=pick(lf,1+Math.floor(rnd()*3)).map(q=>{
+      const left=q<=(TW-1)/2,d=Math.min(q,TW-1-q)+.8,len=Math.hypot(d,HY);
+      return {x:lx(q),s:left?1:-1,xp:left?-TW/2-.3:TW/2+.3,len,hit:Math.acos(HY/len),th:2.6,st:0,t:0};
+    });
+    g+=Math.max(3,Math.round(spd(g)*.2));
+  }
+  return g;
+}
+// 세로로 도는 망치: 머리가 아래로 내려올 때 바로 아래 한 칸을 때린다
+function segd(px,pz,ax,az,bx,bz){const dx=bx-ax,dz=bz-az,t=clamp(((px-ax)*dx+(pz-az)*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(px-ax-t*dx,pz-az-t*dz)}
+// 1번 망치: 공이 도착할 시각(tau)을 기준으로 박자를 맞춘다 (tau=0 일 때 바닥을 찍고 있음)
+function hamTh(h,j){
+  const tau=(j+.5-P.z)/P.sp,ph=((-tau/.7)%1+1)%1,up=2.6,hit=h.hit;
+  if(ph<.12)return hit;
+  if(ph<.55){const t=(ph-.12)/.43;return hit+(up-hit)*(t*t*(3-2*t))}
+  if(ph<.8)return up;
+  if(ph<.93){const t=(ph-.8)/.13;return up+(hit-up)*t*t}
+  return hit;
+}
+// 2번 망치: 왼쪽/오른쪽 끝에서 멈췄다가 휘웅 하고 반대쪽으로 넘어가는 끊기는 스윙
+function swingA(h){
+  const u=(((P.t/h.T+h.ph)%2)+2)%2,half=Math.floor(u),f=u-half;
+  let k=f<.72?0:(f-.72)/.28;k=k*k*(3-2*k);
+  if(half===0)return h.side>0?Math.PI*(1-k):Math.PI+Math.PI*k;
+  return h.side>0?Math.PI*k:2*Math.PI-Math.PI*k;
+}
+function spinners(g){
+  const n=1+Math.floor(rnd()*3);
+  for(let k=0;k<n;k++){
+    if(g>N-24)break;
+    const ls=pick(-1,TW>=5?2:1).sort((a,b)=>a-b),use=ls.filter((q,i)=>i===0||q-ls[i-1]>=3);
+    R[g].spin=use.map(q=>({x:lx(q),ph:rnd()*2,T:1.1+rnd()*.5,side:rnd()<.5?1:-1}));
+    g+=Math.max(4,Math.round(spd(g)*.22));
+  }
+  return g;
+}
+// 움직이는 바닥: 좁은 바닥 띠가 구멍 위에서 좌우로 흔들린다. 올라타서 같이 움직여야 한다
+function mvSc(r,j){return r.mv.amp*Math.sin(P.t*r.mv.w+j*.12+r.mv.ph)*r.mv.r}
+function slider(g){
+  const L=12+Math.floor(rnd()*7),wide=TW>=4&&rnd()<.5,sh=wide?1.5:1,amp=Math.max(.4,TW/2-sh),w=2.2+rnd(),ph=rnd()*6.28;
+  for(let k=0;k<L;k++){const r=R[g+k];r.sh=sh;r.mv={amp,w,ph,r:Math.min(1,(k+1)/3,(L-k)/3)}}
+  return g+L;
+}
+function airD(z){return spd(z)*AIRT}
+// 연속 점프: 점프칸 -> 구멍 -> (좁은) 발판 끝의 점프칸 -> 구멍 ...
+function chain(p,n){
+  n=Math.min(n,Math.floor((N-40-p)/20));if(n<1)return N;
+  const m=rnd()<.4?1:1+Math.floor(rnd()*TW),st=Math.floor(rnd()*(TW-m+1));
+  R[p].pad=true;R[p].px=st+m/2-TW/2;R[p].pw=m/2;
+  let z=p+.1,prevEnd=p;
+  for(let k=0;k<n;k++){
+    const zl=z+airD(z);
+    for(let j=Math.floor(z);j<=Math.ceil(zl)+1&&j<N;j++)R[j].air=true;
+    let gEnd;
+    if(k<n-1){
+      const q=Math.round(zl-1.5),wide=rnd()<.35,sc=wide?Math.floor(rnd()*(TW-1))+1-TW/2:Math.floor(rnd()*TW)+.5-TW/2,sh=wide?1:.5;
+      gEnd=q-1;
+      for(let j=q;j<q+3;j++){R[j].sh=sh;R[j].sc=sc;R[j].air=true}
+      R[q+2].pad=true;R[q+2].px=sc;R[q+2].pw=sh;
+      for(let j=prevEnd+1;j<=gEnd;j++)R[j].gap=true;
+      prevEnd=q+2;z=q+2.1;
+    }else{
+      gEnd=Math.min(prevEnd+3+Math.floor(rnd()*3),Math.floor(zl-2));
+      for(let j=prevEnd+1;j<=gEnd;j++)R[j].gap=true;
+      z=zl;
+    }
+  }
+  return Math.ceil(z)+3;
+}
+function build(){
+  seed=Math.floor(Math.random()*9999)+1;R=[];lf=1;TW=4;SL=-2;LZ=[];
+  for(let i=0;i<N;i++)R.push({c:0,tw:4,hw:2,sc:0,sh:2,gap:false,obs:null,drops:null,hams:null,spin:null,lz:null,gem:null,pad:false,px:0,pw:.5,air:false,got:false,gy:.9});
+  const setW=a=>{for(let i=a;i<N;i++){const r=R[i];r.tw=TW;r.c=SL+TW/2;r.hw=TW/2;r.sh=TW/2}};
+  setW(0);
+  let g=16;
+  while(g<N-30){
+    // 트랙 폭(3~6칸)과 좌우 위치가 패턴 사이에서 바뀐다 (이전 구간과 2칸 이상 겹치게)
+    if(g>30&&g<N-110&&rnd()<.4){
+      const ol=SL,ws=[3,4,4],tw=ws[Math.floor(rnd()*ws.length)];
+      const Lt=clamp(SL+Math.floor(rnd()*5)-2,Math.ceil(-3-tw/2),Math.floor(3-tw/2)),Rt=Lt+tw;
+      let a=SL,b=SL+TW;
+      while(a!==Lt||b!==Rt){
+        {const w=b-a,exL=a>Lt,exR=b<Rt,shL=a<Lt,shR=b>Rt;if(w<4&&(exL||exR)){if(exL)a--;else b++}else if(shL)a++;else if(shR)b--;else if(exL)a--;else b++}
+        SL=a;TW=b-a;setW(g);lf=clamp(lf,0,TW-1);R[g+3].obs=mk(g+3);g+=6;
+      }
+      lf=clamp(lf+ol-SL,0,TW-1);
+    }
+    const k=rnd(),sp=Math.round(spd(g)*.28)+Math.floor(rnd()*2);
+    if(k<.12)g=chain(g,1);
+    else if(k<.24)g=chain(g,2+Math.floor(rnd()*3));
+    else if(k<.34)g=rain(g)+sp;
+    else if(k<.42)g=wallRun(g)+sp;
+    else if(k<.50)g=gates(g)+sp;
+    else if(k<.60)g=lasers(g)+sp;
+    else if(k<.69)g=slams(g)+sp;
+    else if(k<.78)g=spinners(g)+sp;
+    else if(k<.88)g=slider(g)+sp;
+    else{const n=1+Math.floor(rnd()*3);for(let q=0;q<n;q++){R[g].obs=mk(g);g+=sp}}
+  }
+  // 보석 20개: 앞뒤 6줄 동안 같은 줄(세로 방향)에 위험물이 없고 점프/움직이는 바닥 구간도 아닌 칸에만 둔다
+  const hzx=k=>{const r=R[k],b=[];[...(r.obs||[]),...(r.drops||[]),...(r.hams||[]),...(r.lz||[])].forEach(o=>b.push(r.c+o.x));(r.spin||[]).forEach(o=>{for(let d=-1;d<=1;d++)b.push(r.c+o.x+d)});return b};
+  const badRow=k=>R[k].gap||R[k].air||R[k].pad||R[k].mv;
+  const clear=(j,w)=>{
+    const r=R[j],xs=[];
+    if(badRow(j))return xs;
+    for(let q=0;q<r.tw;q++){
+      const x=q-(r.tw-1)/2,wx=r.c+x;let ok=Math.abs(x-r.sc)<=r.sh-.4;
+      for(let k=Math.max(0,j-w);k<=Math.min(N-1,j+w)&&ok;k++){
+        const rk=R[k];
+        if(badRow(k)||Math.abs(wx-(rk.c+rk.sc))>rk.sh-.4||hzx(k).some(h=>Math.abs(h-wx)<.6))ok=false;
+      }
+      if(ok)xs.push(x);
+    }
+    return xs;
+  };
+  const step=Math.floor((N-60)/(GEMS-1));let last=10;
+  for(let k=0;k<GEMS;k++){
+    let j=Math.max(20+k*step,last+8),xs=[];
+    for(const w of [6,3,1,0]){
+      for(let t=j;t<Math.min(N-14,j+24)&&!xs.length;t++){xs=clear(t,w);if(xs.length)j=t}
+      if(xs.length)break;
+    }
+    if(!xs.length){j=Math.min(N-14,j);while(j>20&&!(xs=clear(j,0)).length)j--}
+    last=j;const r=R[j];
+    r.gem=xs[Math.floor(rnd()*xs.length)];r.gy=.9;
+  }
+}
+let P,state='menu',best=0,gems=0,shake=0,camX=0;
+try{best=+localStorage.getItem('rs_best')||0}catch(e){}
+function reset(){build();gems=0;FX=[];P={x:R[0].c,tx:R[0].c,y:0,vy:0,z:1,sp:13.5,fall:false,t:0};camX=P.x;document.getElementById('gems').textContent='◆ 0/'+GEMS}
+const keys={};
+addEventListener('keydown',e=>keys[e.key]=1);
+addEventListener('keyup',e=>keys[e.key]=0);
+let dragX=null;
+cv.addEventListener('pointerdown',e=>{dragX=e.clientX});
+cv.addEventListener('pointermove',e=>{if(dragX==null||state!=='play')return;const dx=e.clientX-dragX;dragX=e.clientX;P.tx+=dx/W*7.5});
+addEventListener('pointerup',()=>{dragX=null});
+let ac;
+function beep(f,d){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.type='triangle';g.gain.value=.08;g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+
+// 하늘에서 떨어지는 가시: 플레이어가 가까워지면 어두운 칸 위로 떨어진다
+function updDrops(dt){
+  if(!P)return;
+  LZ.forEach(L=>{
+    if(L.st===0&&L.e-P.z<3&&P.z<L.e){L.st=1;L.f=L.e}
+    if(L.st===1){L.f=Math.max(L.s,L.f-320*dt);if(P.z>L.e+1.2)L.st=2}
+  });
+  for(let j=Math.max(0,Math.floor(P.z)-4);j<Math.min(N,Math.floor(P.z)+56);j++){
+    const r=R[j];
+    if(r.drops)r.drops.forEach(d=>{
+      if(!d.st&&j-P.z<.8+P.sp*.42)d.st=1;
+      if(d.st===1){d.y-=22*dt;if(d.y<=0){d.y=0;d.st=2}}
+    });
+    if(r.hams)r.hams.forEach(h=>{h.th=hamTh(h,j)});
+  }
+}
+function update(dt){const n=Math.max(1,Math.ceil(dt/.017));for(let k=0;k<n;k++)step(dt/n)}
+function step(dt){
+  if(state!=='play')return;
+  P.t+=dt;
+  if(keys.ArrowLeft||keys.a||keys.A)P.tx-=6*dt;
+  if(keys.ArrowRight||keys.d||keys.D)P.tx+=6*dt;
+  P.sp=spd(P.z);
+  P.z+=P.sp*dt;P.vy-=GR*dt;P.y+=P.vy*dt;
+  const i=Math.min(Math.floor(P.z),N-1),r=R[i],fz=P.z-i;if(r.mv)r.sc=mvSc(r,i);
+  P.tx=clamp(P.tx,r.c-r.hw-3,r.c+r.hw+3);P.x+=(P.tx-P.x)*Math.min(1,dt*20);P.x=clamp(P.x,r.c-r.hw-3,r.c+r.hw+3);
+  if(!P.fall){
+    const onTrack=!(r.gap&&fz>.3)&&Math.abs(P.x-(r.c+r.sc))<=r.sh+.25;
+    if(P.y<=0){if(onTrack){P.y=0;P.vy=0}else P.fall=true}
+    if(r.pad&&Math.abs(P.x-(r.c+r.px))<r.pw+.3&&P.y<=.05&&P.vy<=0&&onTrack){P.vy=JV;P.y=.06;beep(520,.12)}
+    if(r.drops&&fz>.2&&fz<.9)r.drops.forEach(d=>{if(Math.abs(P.x-(r.c+d.x))<.58&&P.y+.6>d.y&&P.y<d.y+.45)die()});
+    if(r.lz)r.lz.forEach(L=>{if(L.st===1&&P.z>=L.f&&Math.abs(P.x-(r.c+L.x))<.52&&P.y<1.1)die()});
+    if(r.hams&&fz>.1&&fz<.95)r.hams.forEach(h=>{if(Math.abs(P.x-(r.c+h.x))<.55&&HY-h.len*Math.cos(hamTh(h,i))<P.y+1)die()});
+    for(let j=Math.max(0,i-2);j<=Math.min(N-1,i+2);j++){const q=R[j];if(!q.spin)continue;q.spin.forEach(h=>{
+      const a=swingA(h),ax=q.c+h.x,az=j+.5,hx=ax+Math.cos(a),hz=az+Math.sin(a);
+      if((P.y<.6&&Math.hypot(P.x-ax,P.z-az)<.38)||(P.y<.7&&Math.hypot(P.x-hx,P.z-hz)<.52)||(P.y<.3&&segd(P.x,P.z,ax,az,hx,hz)<.33))die()})}
+        if(r.obs)r.obs.forEach(o=>{if(fz>(o.lg?.1:.25)&&fz<(o.lg?.9:.85)&&Math.abs(P.x-(r.c+o.x))<.58&&P.y<(o.t==='s'?.45:o.h*.9)-.05)die()});
+    if(r.gem!=null&&!r.got&&fz>.2&&fz<.95&&Math.abs(P.x-(r.c+r.gem))<1&&Math.abs(P.y+.4-r.gy)<1.3){r.got=true;gems++;FX.push({t:performance.now()});beep(880,.1);document.getElementById('gems').textContent='◆ '+gems+'/'+GEMS}
+  }else if(P.y<-7)die();
+  if(P.z>=N-3&&!P.fall)win();
+  camX+=(P.x-camX)*Math.min(1,dt*6);
+  document.getElementById('fill').style.width=Math.min(100,P.z/N*100)+'%';
+}
+function die(){if(state!=='play')return;state='over';beep(120,.3);shake=.3;show('실패!',`진행률 ${Math.floor(P.z/N*100)}% · 보석 ${gems}/${GEMS}`,'다시 하기')}
+function win(){if(state!=='play')return;state='over';beep(990,.4);if(gems>best){best=gems;try{localStorage.setItem('rs_best',best)}catch(e){}}show('클리어!',`보석 ${gems}/${GEMS} · 최고 기록 ${best}개`,'다시 하기')}
+function show(t,m,b){document.getElementById('t').textContent=t;document.getElementById('m').textContent=m;document.getElementById('go').textContent=b;document.getElementById('ov').style.display='flex'}
+document.getElementById('go').onclick=e=>{e.stopPropagation();reset();state='play';document.getElementById('ov').style.display='none'};
+
+// ---- 렌더링 ----
+let camZ=0,hy=0,F=0,H0=210,fogK=0,FR=0,FGc=0,FB=0;
+const hs=(h,s,l,a=1)=>`hsla(${h%360},${s}%,${l}%,${a})`;
+function rgb(h,s,l){h=((h%360)+360)%360;s/=100;l/=100;const k=s*Math.min(l,1-l),f=n=>{const t=(n+h/30)%12;return 255*(l-k*Math.max(-1,Math.min(t-3,9-t,1)))};return[f(0),f(8),f(4)]}
+function C(h,s,l){const c=rgb(h,s,l);return`rgb(${(c[0]+(FR-c[0])*fogK)|0},${(c[1]+(FGc-c[1])*fogK)|0},${(c[2]+(FB-c[2])*fogK)|0})`}
+function pr(x,y,z){const dz=Math.max(z-camZ,.4),s=F/dz;return[W/2+(x-camX)*s,hy+(4.6-y)*s,s]}
+function poly(pts,fill){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=fill;ctx.lineWidth=1;ctx.lineJoin='round';ctx.stroke()}
+
+function drawObs(r,i,o,y0=0){
+  if(o.t==='c'){drawTurret(r,i,o);return}
+  const xm=r.c+o.x,e=o.lg?.5:.48,x0=xm-e,x1=xm+e,za=o.lg?i:i+.1,zb=o.lg?i+1:i+.9,h=o.h;
+  if(o.t==='s'){
+    const A=pr(x0,y0,za),B=pr(x1,y0,za),K=pr(x1,y0,zb),L=pr(x0,y0,zb),T=pr(xm,y0+h,(za+zb)/2),hs_=H0+35;
+    poly(camX<xm?[L,A,T]:[B,K,T],C(hs_,70,32));
+    poly([A,B,T],C(hs_,75,48));
+  }else{
+    const hp=H0+8,ll=h>1.5?26:32,has=d=>o.lg&&r.obs.some(q=>q.lg&&q.x===o.x+d);
+    if(camX<x0&&!has(-1))poly([pr(x0,0,za),pr(x0,0,zb),pr(x0,h,zb),pr(x0,h,za)],C(hp,45,ll-10));
+    if(camX>x1&&!has(1))poly([pr(x1,0,za),pr(x1,0,zb),pr(x1,h,zb),pr(x1,h,za)],C(hp,45,ll-10));
+    poly([pr(x0,0,za),pr(x1,0,za),pr(x1,h,za),pr(x0,h,za)],C(hp,45,ll));
+    poly([pr(x0,h,za),pr(x1,h,za),pr(x1,h,zb),pr(x0,h,zb)],C(hp,50,ll+16));
+  }
+}
+function box(x0,x1,za,zb,y0,y1,h,s,l){
+  if(camX<x0)poly([pr(x0,y0,za),pr(x0,y0,zb),pr(x0,y1,zb),pr(x0,y1,za)],C(h,s,l-14));
+  if(camX>x1)poly([pr(x1,y0,za),pr(x1,y0,zb),pr(x1,y1,zb),pr(x1,y1,za)],C(h,s,l-14));
+  poly([pr(x0,y0,za),pr(x1,y0,za),pr(x1,y1,za),pr(x0,y1,za)],C(h,s,l));
+  poly([pr(x0,y1,za),pr(x1,y1,za),pr(x1,y1,zb),pr(x0,y1,zb)],C(h,s,l+14));
+}
+function drawTurret(){}
+function drawEm(r,i,L){
+  const x=r.c+L.x,on=L.st===1,bl=on||(L.e-P.z<30&&(Math.floor(P.t*9)&1));
+  box(x-.46,x+.46,i+.1,i+.9,0,.55,215,15,38);
+  box(x-.17,x+.17,i-.15,i+.55,.4,.88,215,12,30);
+  box(x-.1,x+.1,i-.18,i-.15,.5,.8,352,95,on?75:(bl?60:44));
+}
+// 망치: 맵에 박힌 기둥(회전축) + 손잡이 + 쇠머리. 기둥은 s 방향으로 휘두른다
+function malletX(x,zc,py,L,a,s,tail,post0){
+  const hx=x+s*L*Math.sin(a),hy=py-L*Math.cos(a);
+  box(x-.14,x+.14,zc-.14,zc+.14,post0,py,28,35,30);
+  const pv=pr(x,py,zc),hd=pr(hx,hy,zc);
+  let tx=pv[0],ty=pv[1];
+  if(tail){const t=pr(x-s*tail*Math.sin(a),py+tail*Math.cos(a),zc);tx=t[0];ty=t[1]}
+  ctx.lineCap='round';
+  ctx.strokeStyle=C(28,50,32);ctx.lineWidth=Math.max(2,pv[2]*.14);ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(hd[0],hd[1]);ctx.stroke();
+  ctx.lineCap='butt';
+  if(tail){ctx.fillStyle=C(215,15,30);ctx.beginPath();ctx.arc(tx,ty,pv[2]*.11,0,7);ctx.fill()}
+  ctx.fillStyle=C(215,15,26);ctx.beginPath();ctx.arc(pv[0],pv[1],pv[2]*.17,0,7);ctx.fill();
+  box(hx-.38,hx+.38,zc-.42,zc+.42,hy-.3,hy+.3,215,16,44);
+}
+function drawHam(r,i,h){malletX(r.c+h.xp,i+.5,HY,h.len,h.th,h.s,0,-.7)}
+// 방향(dx,dz)으로 놓인 회전 상자
+function obox(cx,cz,dx,dz,hl,hw,y0,y1,h,s,l){
+  const nx=-dz,nz=dx;
+  const Q=[[-1,-1],[1,-1],[1,1],[-1,1]].map(u=>[cx+dx*hl*u[0]+nx*hw*u[1],cz+dz*hl*u[0]+nz*hw*u[1]]);
+  for(let k=0;k<4;k++){
+    const a=Q[k],b=Q[(k+1)%4],mx=(a[0]+b[0])/2,mz=(a[1]+b[1])/2;
+    if((mx-cx)*(camX-mx)+(mz-cz)*(camZ-mz)>0)poly([pr(a[0],y0,a[1]),pr(b[0],y0,b[1]),pr(b[0],y1,b[1]),pr(a[0],y1,a[1])],C(h,s,l-8-(k&1)*8));
+  }
+  poly(Q.map(q=>pr(q[0],y1,q[1])),C(h,s,l+14));
+}
+function drawSpin(r,j,h,a){
+  const x=r.c+h.x,z=j+.5,dx=Math.cos(a),dz=Math.sin(a);
+  [[z,()=>box(x-.22,x+.22,z-.22,z+.22,0,.55,215,12,36)],
+   [z+dz*.5,()=>obox(x+dx*.5,z+dz*.5,dx,dz,.5,.12,0,.25,28,50,34)],
+   [z+dz,()=>obox(x+dx,z+dz,dx,dz,.28,.4,0,.6,215,16,44)]].sort((p,q)=>q[0]-p[0]).forEach(p=>p[1]());
+}
+function drawGem(r,i){
+  const p=pr(r.c+r.gem,r.gy+Math.sin(P.t*4+i)*.1,i+.5),s=p[2]*.46;
+  poly([[p[0]-s*.75,p[1]],[p[0],p[1]-s],[p[0]+s*.75,p[1]]],C(330,90,78));
+  poly([[p[0]-s*.75,p[1]],[p[0]+s*.75,p[1]],[p[0],p[1]+s]],C(335,80,58));
+}
+function draw(){
+  F=H*.8;hy=H*.25;camZ=P.z-7;
+  H0=(205+P.t*9+P.z*.15)%360;const ph=(Math.sin(P.t*.35)+1)/2,hl=72+10*ph;
+  const fc=rgb(H0,60,hl);FR=fc[0];FGc=fc[1];FB=fc[2];fogK=0;
+  let sx=0,sy=0;if(shake>0){sx=(Math.random()-.5)*10;sy=(Math.random()-.5)*10}
+  ctx.save();ctx.translate(sx,sy);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,hs(H0,50,44+18*ph));g.addColorStop(.25,hs(H0,60,hl));g.addColorStop(1,hs(H0,45,36+16*ph));
+  ctx.fillStyle=g;ctx.fillRect(-20,-20,W+40,H+40);
+  ctx.fillStyle=hs(H0+30,90,94,.55);ctx.beginPath();ctx.arc(W*.7-camX*8,hy-H*.03,H*.09,0,7);ctx.fill();
+  const start=Math.max(0,Math.floor(camZ)),end=Math.min(N-1,Math.floor(P.z)+52),pi=Math.min(Math.floor(P.z),N-1);
+  for(let j=start;j<=end;j++){const q=R[j];if(q.mv)q.sc=mvSc(q,j)}
+  const hb={};
+  for(let j=start;j<=Math.min(N-1,end+1);j++){const q=R[j];if(q.spin)q.spin.forEach(h=>{const a=swingA(h),k=clamp(Math.floor(Math.min(j+.3,j+.5+Math.sin(a)-.45)),start,end);(hb[k]=hb[k]||[]).push([h,j,a])})}
+  for(let i=end;i>=start;i--){
+    const r=R[i],z0=Math.max(i,camZ+.5),z1=i+1;
+    if(z1<=camZ+.5)continue;
+    fogK=clamp((i-P.z-14)/36,0,1);
+    if(!r.gap){
+      const sl=r.c+r.sc-r.sh,sr=r.c+r.sc+r.sh,nt=Math.round(r.sh*2);
+      poly([pr(sl,0,z0),pr(sr,0,z0),pr(sr,0,z1),pr(sl,0,z1)],C(H0,32,56));
+      for(let j=0;j<nt;j++){
+        const a=sl+j+.04,b=sl+j+.96,cx=sl+j+.5-r.c,za=Math.max(i+.04,camZ+.5),zb=i+.96;
+        const isPad=r.pad&&Math.abs(cx-r.px)<=r.pw-.5+.01,isDrop=(r.drops&&r.drops.some(d=>d.x===cx))||(r.hams&&r.hams.some(d=>d.x===cx));
+        let h=H0,sa=30,l=isDrop?62:77;
+        if(isPad){h=H0+75;sa=75;l=58}
+        poly([pr(a,0,za),pr(b,0,za),pr(b,0,zb),pr(a,0,zb)],C(h,sa,l));
+        poly([pr(a,0,za),pr(b,0,za),pr(b,-.12,za),pr(a,-.12,za)],C(h,sa,l-14));
+      }
+      const wc=C(H0,32,46);
+      if(camX>sl)poly([pr(sl,0,z0),pr(sl,0,z1),pr(sl,-.7,z1),pr(sl,-.7,z0)],wc);
+      if(camX<sr)poly([pr(sr,0,z0),pr(sr,0,z1),pr(sr,-.7,z1),pr(sr,-.7,z0)],wc);
+      if(i>0&&i>=camZ+.5){
+        const pv=R[i-1],fc=C(H0,34,40);
+        if(pv.gap)poly([pr(sl,0,i),pr(sr,0,i),pr(sr,-.7,i),pr(sl,-.7,i)],fc);
+        else{
+          const a=pv.c+pv.sc-pv.sh,b=pv.c+pv.sc+pv.sh;
+          if(sl<a-.01){const e=Math.min(sr,a);poly([pr(sl,0,i),pr(e,0,i),pr(e,-.7,i),pr(sl,-.7,i)],fc)}
+          if(sr>b+.01){const s0=Math.max(sl,b);poly([pr(s0,0,i),pr(sr,0,i),pr(sr,-.7,i),pr(s0,-.7,i)],fc)}
+        }
+      }
+    }
+    if(r.obs)r.obs.slice().sort((a,b)=>Math.abs(b.x+r.c-camX)-Math.abs(a.x+r.c-camX)).forEach(o=>drawObs(r,i,o));
+    if(r.drops)r.drops.forEach(d=>drawObs(r,i,{x:d.x,t:'s',h:1},d.y));
+    if(r.lz)r.lz.forEach(L=>{
+      const za=Math.max(i,L.f),zb=Math.min(i+1,L.e-.18);
+      if(L.st===1&&zb>za){const x=r.c+L.x;poly([pr(x-.46,0,za),pr(x+.46,0,za),pr(x+.46,0,zb),pr(x-.46,0,zb)],C(352,80,56));box(x-.4,x+.4,za,zb,.35,1.05,355,90,48);box(x-.18,x+.18,za,zb,.45,1.1,15,55,88)}
+      if(L.e===i)drawEm(r,i,L);
+    });
+    if(r.hams)r.hams.forEach(h=>drawHam(r,i,h));
+    if(hb[i])hb[i].forEach(q=>drawSpin(R[q[1]],q[1],q[0],q[2]));
+    if(r.gem!=null&&!r.got)drawGem(r,i);
+    if(i===pi)ball();
+  }
+  const now=performance.now();FX=FX.filter(f=>now-f.t<450);
+  if(FX.length){
+    const bp=pr(P.x,.46+P.y,P.z),bs=bp[2]*.46;
+    FX.forEach(f=>{
+      const a=(now-f.t)/450,al=1-a;
+      ctx.globalAlpha=al;ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(bp[0],bp[1],bs*(1.3+a*2.2),0,7);ctx.stroke();
+      ctx.fillStyle='#ff9ecb';
+      for(let k=0;k<8;k++){const an=k*.785+.3,rr=bs*(1.2+a*2.8);ctx.beginPath();ctx.arc(bp[0]+Math.cos(an)*rr,bp[1]+Math.sin(an)*rr,bs*.16*al+1,0,7);ctx.fill()}
+    });
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+function ball(){
+  const sh=pr(P.x,0,P.z),p=pr(P.x,.46+P.y,P.z),s=p[2]*.46;
+  if(!P.fall&&P.y>=0){ctx.fillStyle='rgba(20,30,60,.25)';ctx.beginPath();ctx.ellipse(sh[0],sh[1],s*(1-Math.min(P.y,2)*.15),s*.3,0,0,7);ctx.fill()}
+  const g=ctx.createRadialGradient(p[0]-s*.35,p[1]-s*.4,s*.1,p[0],p[1],s);
+  g.addColorStop(0,'#fff6e0');g.addColorStop(.45,'#ffc65c');g.addColorStop(1,'#f0873a');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(p[0],p[1],s,0,7);ctx.fill();
+}
+let last=performance.now();
+reset();
+function loop(t){
+  const dt=Math.min((t-last)/1000,.05);last=t;
+  if(shake>0)shake-=dt;
+  updDrops(dt);
+  update(dt);
+  if(state==='menu'){P.z=1+((t/1000*6)%60);P.x=R[Math.floor(P.z)].c;P.t=t/1000;camX=P.x}
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
