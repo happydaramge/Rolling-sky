@@ -45,6 +45,9 @@ canvas{display:block;width:100%;height:100%}
 #ov p{white-space:pre-line}
 .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 #hb{pointer-events:auto;font-size:20px;line-height:1;background:rgba(255,255,255,.28);color:#fff;border:0;border-radius:10px;width:38px;height:34px;cursor:pointer}
+#st:disabled{opacity:.55;cursor:default}
+.mrow.lock{filter:saturate(.5) brightness(.8)}
+.mrow.hid{filter:none;box-shadow:0 0 0 2px #c58bff,0 0 18px rgba(197,139,255,.6)}
 </style>
 </head>
 <body>
@@ -66,17 +69,23 @@ function rs(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.
 addEventListener('resize',rs);rs();
 
 const N=420,GEMS=20,JV=10.5,GR=32,AIRT=.66,SY=.9,SR=.9,HY=1.5;
-function spd(z){return Math.min(13.5+z*.013,21)*SPM}
+function spd(z){return Math.min(14+z*.014,22)*SPM}
 let R=[],seed=7,lf=1;
 function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const MAPS=[
- {id:'cloud',name:'구름 위 산책',icon:'☁️',desc:'푸른 하늘 위를 가볍게 달려요. 점프와 가시 위주의 입문 맵.',seed:1234,hue:205,drift:8,sat:55,top:60,hl:85,bot:52,tl:77,diff:1,spm:.9,mul:{jump:1.5,jumps:1.3,plain:1.2,laser:.3,spin:.5,rocket:.4,slam:.6}},
- {id:'space',name:'별빛 우주',icon:'🪐',desc:'행성과 별 사이를 지나가요. 레이저와 로켓 바닥이 많아요.',seed:4242,hue:262,drift:12,sat:55,top:14,hl:30,bot:10,tl:74,diff:3,spm:1,mul:{laser:2,rocket:1.8,spin:1.4,rain:.6}},
- {id:'snow',name:'눈꽃 설원',icon:'❄️',desc:'눈 내리는 산악 지대. 흔들리는 바닥과 고드름 가시가 나와요.',seed:777,hue:215,drift:6,sat:50,top:38,hl:78,bot:32,tl:88,diff:2,spm:1,mul:{slide:2,rain:1.8,gate:1.2,laser:.6}},
- {id:'desert',name:'황금 사막',icon:'🏜️',desc:'뜨거운 노을 사막. 망치와 벽이 가득한 가장 어려운 맵.',seed:9001,hue:28,drift:6,sat:70,top:46,hl:76,bot:34,tl:78,diff:4,spm:1.08,mul:{slam:2,spin:1.6,wall:2,gate:1.6,slide:.5}}
+ {id:'cloud',name:'구름 위 산책',icon:'☁️',desc:'푸른 하늘 위를 달려요. 점프와 가시가 중심인 입문 맵.',seed:1234,hue:205,drift:8,sat:55,top:60,hl:85,bot:52,tl:77,diff:1,spm:1,den:.95,mul:{jump:1.4,jumps:1.1,crumble:.8,laser:.3,spin:.6,rocket:.5,slam:.7,wall:.8}},
+ {id:'space',name:'별빛 우주',icon:'🪐',desc:'행성과 별 사이를 지나가요. 레이저와 로켓 바닥이 많아요.',seed:4242,hue:262,drift:12,sat:55,top:14,hl:30,bot:10,tl:74,diff:2,spm:1.04,den:.85,mul:{laser:2,rocket:1.6,spin:1.3,rain:.6,plain:.8}},
+ {id:'snow',name:'눈꽃 설원',icon:'❄️',desc:'눈 내리는 산악 지대. 흔들리는 바닥과 고드름 가시가 나와요.',seed:777,hue:215,drift:6,sat:50,top:38,hl:78,bot:32,tl:88,diff:3,spm:1.08,den:.76,mul:{slide:1.8,rain:1.6,gate:1.2,crumble:1.3,laser:.7,plain:.8}},
+ {id:'desert',name:'황금 사막',icon:'🏜️',desc:'뜨거운 노을 사막. 망치, 벽, 점프가 한꺼번에 몰려와요.',seed:9001,hue:28,drift:6,sat:70,top:46,hl:76,bot:34,tl:78,diff:4,spm:1.12,den:.62,mul:{slam:1.7,spin:1.5,wall:1.5,gate:1.4,jumps:1.3,rocket:1.2,laser:1.1,slide:.8,plain:.6}},
+ {id:'sea',name:'심해 정원',icon:'🌊',desc:'빛이 닿는 깊은 바다. 부서지는 발판과 흔들리는 바닥이 많아요.',seed:31337,hue:195,drift:6,sat:60,top:30,hl:55,bot:18,tl:80,diff:5,spm:1.16,den:.54,mul:{slide:1.6,crumble:1.2,laser:1.3,rain:1.3,jump:1.2,plain:.6}},
+ {id:'city',name:'네온 도시',icon:'🌆',desc:'불 켜진 밤의 도시. 레이저와 도는 망치가 쉴 틈 없이 나와요.',seed:2077,hue:300,drift:14,sat:60,top:12,hl:28,bot:8,tl:72,diff:6,spm:1.2,den:.53,mul:{laser:1.8,spin:1.6,rocket:1.5,gate:1.4,jumps:1.3,plain:.5}},
+ {id:'lava',name:'용암 화산',icon:'🌋',desc:'끓는 용암 위의 길. 로켓 바닥과 망치가 쏟아져요.',seed:6666,hue:8,drift:6,sat:75,top:14,hl:36,bot:8,tl:70,diff:7,spm:1.24,den:.47,mul:{rocket:2,slam:1.8,spin:1.4,crumble:1.4,wall:1.4,jumps:1.3,plain:.4}},
+ {id:'hole',name:'블랙홀',icon:'🕳️',desc:'모든 장애물이 총출동하는 가장 어려운 맵.',seed:1313,hue:275,drift:10,sat:50,top:6,hl:20,bot:4,tl:68,diff:8,spm:1.28,den:.42,mul:{laser:1.6,rocket:1.6,spin:1.6,slam:1.6,slide:1.5,crumble:1.6,jumps:1.6,wall:1.3,gate:1.3,rain:1.3,plain:.2}},
+ {id:'rift',hidden:true,name:'균열의 방',icon:'🌀',desc:'정해진 조건으로만 들어갈 수 있는 비밀 공간.',seed:8888,hue:300,drift:0,sat:75,top:8,hl:24,bot:4,tl:74,diff:7,spm:1.18,den:.58,mul:{laser:1.3,rocket:1.3,spin:1.3,slam:1.3,slide:1.3,crumble:1.3,jumps:1.3,wall:1.1,gate:1.1,rain:1.1,plain:.4}}
 ];
-let curMap=0;
+const NV=MAPS.filter(m=>!m.hidden).length;
+let curMap=0,DEN=1;
 try{curMap=clamp(+localStorage.getItem('rs_map')||0,0,MAPS.length-1)}catch(e){}
 const $=id=>document.getElementById(id);
 function ld(id){try{return JSON.parse(localStorage.getItem('rs_'+id))||{}}catch(e){return{}}}
@@ -85,13 +94,14 @@ function sv(id,o){try{localStorage.setItem('rs_'+id,JSON.stringify(o))}catch(e){
 // 한 줄 장애물: 빈 칸 1~2개, 나머지는 가시/낮은 블록/높은 벽이 섞여서 막고 있다
 let TW=4,SL=-2,LZ=[],FX=[],RK=[],SPM=1;
 const lx=q=>q-(TW-1)/2;
+const shift=()=>DEN<.7?Math.floor(rnd()*3)-1:Math.floor(rnd()*5)-2;
 function pick(ex,n){const a=[];for(let q=0;q<TW;q++)if(q!==ex)a.push(q);a.sort(()=>rnd()-.5);return a.slice(0,Math.min(n,a.length))}
 // 한 줄 장애물: 빈 칸 1~3개, 막힌 칸은 이어진 구간마다 같은 종류(가시/낮은 블록/높은 기둥)라서 서로 붙지 않는다
 function mk(g){
   // 직전(8줄 이내) 장애물 줄의 기둥 뒤쪽 칸은 가려져서 안 보이므로 가시를 놓지 않는다
   const PB=new Set();
   for(let j=g-1;j>=Math.max(0,g-8);j--){if(R[j].obs){R[j].obs.forEach(o=>{if(o.t==='b')PB.add(o.x)});break}}
-  const far=rnd()<.25?3:2,free=new Set();
+  const far=Math.min(rnd()<.25?3:2,DEN<.7?1:3),free=new Set();
   lf=clamp(lf+Math.floor(rnd()*(2*far+1))-far,0,TW-1);free.add(lf);
   if(TW>=4&&rnd()<.15)free.add(lf<TW-1?lf+1:lf-1);
   const o=[];let run=[];
@@ -108,7 +118,7 @@ function mk(g){
 // 휘어지는 벽 복도: 2칸 폭 통로가 구간마다 좌우로 한 칸씩 움직인다
 function wallRun(g){
   let f=Math.floor(rnd()*(TW-1));
-  const segs=2+Math.floor(rnd()*2);
+  const segs=2+(MAPS[curMap].diff>=6?Math.floor(rnd()*2):0);
   for(let s=0;s<segs;s++){
     const L=1+Math.floor(rnd()*2);
     for(let j=0;j<L;j++){const o=[];for(let q=0;q<TW;q++)if(q!==f&&q!==f+1)o.push({x:lx(q),t:'b',h:1.8,lg:true});R[g++].obs=o}
@@ -118,12 +128,12 @@ function wallRun(g){
 }
 // 관문: 한 칸만 뚫린 벽이 연속으로, 뚫린 칸이 매번 달라진다
 function gates(g){
-  const n=2+Math.floor(rnd()*3);
+  const n=2+Math.floor(rnd()*2);
   for(let k=0;k<n;k++){
     if(g>N-24)break;
-    lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
+    lf=clamp(lf+shift(),0,TW-1);
     for(let j=0;j<2;j++)R[g++].obs=[...Array(TW).keys()].filter(q=>q!==lf).map(q=>({x:lx(q),t:'b',h:1.8,lg:true}));
-    g+=Math.max(3,Math.round(spd(g)*.2));
+    g+=Math.max(3,Math.round(spd(g)*.2*DEN));
   }
   return g;
 }
@@ -132,17 +142,17 @@ function rain(g){
   const n=1+Math.floor(rnd()*3);
   for(let k=0;k<n;k++){
     if(g>N-24)break;
-    lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
-    R[g].drops=pick(lf,1+Math.floor(rnd()*3)).map(q=>({x:lx(q),y:9,st:0}));
-    g+=Math.max(3,Math.round(spd(g)*.2));
+    lf=clamp(lf+shift(),0,TW-1);
+    R[g].drops=pick(lf,1+Math.floor(rnd()*(MAPS[curMap].diff>=4?3:2))).map(q=>({x:lx(q),y:9,st:0}));
+    g+=Math.max(3,Math.round(spd(g)*.2*DEN));
   }
   return g;
 }
 // 레이저포: 발사블럭이 줄 맨 앞에 있고, 공이 1.5칸 전에 오면 그 줄 앞쪽 전체로 빔을 쏜다
 function lasers(g){
   let L=14+Math.floor(rnd()*9);L=Math.min(L,N-22-g);if(L<8)return N;
-  lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
-  pick(lf,1+Math.floor(rnd()*3)).forEach(q=>{
+  lf=clamp(lf+shift(),0,TW-1);
+  pick(lf,MAPS[curMap].diff>=5?1+Math.floor(rnd()*2):1).forEach(q=>{
     const o={x:lx(q),s:g,e:g+L-1,st:0,f:g};LZ.push(o);
     for(let j=g;j<g+L;j++)(R[j].lz=R[j].lz||[]).push(o);
   });
@@ -153,12 +163,12 @@ function slams(g){
   const n=1+Math.floor(rnd()*3);
   for(let k=0;k<n;k++){
     if(g>N-24)break;
-    lf=clamp(lf+Math.floor(rnd()*5)-2,0,TW-1);
-    R[g].hams=pick(lf,1+Math.floor(rnd()*3)).map(q=>{
+    lf=clamp(lf+shift(),0,TW-1);
+    R[g].hams=pick(lf,1+Math.floor(rnd()*(MAPS[curMap].diff>=4?3:2))).map(q=>{
       const left=q<=(TW-1)/2,d=Math.min(q,TW-1-q)+.8,len=Math.hypot(d,HY);
       return {x:lx(q),s:left?1:-1,xp:left?-TW/2-.3:TW/2+.3,len,hit:Math.acos(HY/len),th:2.6,st:0,t:0};
     });
-    g+=Math.max(3,Math.round(spd(g)*.2));
+    g+=Math.max(3,Math.round(spd(g)*.2*DEN));
   }
   return g;
 }
@@ -181,25 +191,25 @@ function swingA(h){
   return h.side>0?Math.PI*k:2*Math.PI-Math.PI*k;
 }
 function spinners(g){
-  const n=1+Math.floor(rnd()*3);
+  const n=1+Math.floor(rnd()*(MAPS[curMap].diff>=6?3:2));
   for(let k=0;k<n;k++){
     if(g>N-24)break;
     const ls=pick(-1,TW>=5?2:1).sort((a,b)=>a-b),use=ls.filter((q,i)=>i===0||q-ls[i-1]>=3);
     R[g].spin=use.map(q=>({x:lx(q),ph:rnd()*2,T:1.1+rnd()*.5,side:rnd()<.5?1:-1}));
-    g+=Math.max(4,Math.round(spd(g)*.22));
+    g+=Math.max(4,Math.round(spd(g)*.22*DEN));
   }
   return g;
 }
 // 움직이는 바닥: 좁은 바닥 띠가 구멍 위에서 좌우로 흔들린다. 올라타서 같이 움직여야 한다
 function mvSc(r,j){return r.mv.amp*Math.sin(P.t*r.mv.w+j*.12+r.mv.ph)*r.mv.r}
 function slider(g){
-  const L=12+Math.floor(rnd()*7),wide=TW>=4&&rnd()<.5,sh=wide?1.5:1,amp=Math.max(.4,TW/2-sh),w=2.2+rnd(),ph=rnd()*6.28;
+  const L=12+Math.floor(rnd()*7),wide=TW>=4&&rnd()<.5,sh=wide?1.5:1,amp=Math.max(.4,TW/2-sh),w=1.6+MAPS[curMap].diff*.1+rnd()*.5,ph=rnd()*6.28;
   for(let k=0;k<L;k++){const r=R[g+k];r.sh=sh;r.mv={amp,w,ph,r:Math.min(1,(k+1)/3,(L-k)/3)}}
   return g+L;
 }
 // 로켓 바닥: 십자가 모양(5칸) 바닥이 플레이어가 가까이 오면 위로 발사되고 구멍이 남는다
 function rockets(g){
-  const n=1+(rnd()<.45?1:0);
+  const n=1+(MAPS[curMap].diff>=6&&rnd()<.5?1:0);
   for(let k=0;k<n;k++){
     if(g>N-30)break;
     let f=clamp(lf+Math.floor(rnd()*3)-1,0,TW-1);if(TW===3&&f===1)f=rnd()<.5?0:2;lf=f;
@@ -211,11 +221,24 @@ function rockets(g){
   }
   return g;
 }
+// 떨어지는 발판: 구멍 위의 좁은 길. 한 줄을 밟으면 지나가는 건 되지만 곧 아래로 떨어져 사라진다
+const CRD=.16,PT={jump:2,jumps:3.6,rain:2,wall:3,gate:3,laser:3.6,slam:2,spin:3,slide:3,rocket:3,crumble:2,plain:1.2};
+function crAge(r){return r.cr&&r.cr.t!=null?P.t-r.cr.t:-1}
+function crumble(g){
+  const L=10+Math.floor(rnd()*7),narrow=MAPS[curMap].diff>=6&&rnd()<.5,sh=narrow?.5:1,n=narrow?TW:TW-1;
+  let j=Math.floor(rnd()*n),keep=0;
+  for(let k=0;k<L;k++){
+    if(keep<=0){j=clamp(j+(rnd()<.5?-1:1),0,n-1);keep=(MAPS[curMap].diff>=6?1:2)+Math.floor(rnd()*2)}
+    keep--;
+    const r=R[g+k];r.sh=sh;r.sc=(narrow?j+.5:j+1)-TW/2;r.cr={t:null};
+  }
+  return g+L;
+}
 function airD(z){return spd(z)*AIRT}
 // 연속 점프: 점프칸 -> 구멍 -> (좁은) 발판 끝의 점프칸 -> 구멍 ...
 function chain(p,n){
   n=Math.min(n,Math.floor((N-40-p)/20));if(n<1)return N;
-  const m=rnd()<.4?1:1+Math.floor(rnd()*TW),st=Math.floor(rnd()*(TW-m+1));
+  const dfc=MAPS[curMap].diff,m=dfc<=3?2+Math.floor(rnd()*(TW-1)):(rnd()<.4?1:1+Math.floor(rnd()*TW)),st=Math.floor(rnd()*(TW-m+1));
   R[p].pad=true;R[p].px=st+m/2-TW/2;R[p].pw=m/2;
   let z=p+.1,prevEnd=p;
   for(let k=0;k<n;k++){
@@ -223,7 +246,7 @@ function chain(p,n){
     for(let j=Math.floor(z);j<=Math.ceil(zl)+1&&j<N;j++)R[j].air=true;
     let gEnd;
     if(k<n-1){
-      const q=Math.round(zl-1.5),wide=rnd()<.35,sc=wide?Math.floor(rnd()*(TW-1))+1-TW/2:Math.floor(rnd()*TW)+.5-TW/2,sh=wide?1:.5;
+      const q=Math.round(zl-1.5),wide=MAPS[curMap].diff<6||rnd()<.35,sc=wide?Math.floor(rnd()*(TW-1))+1-TW/2:Math.floor(rnd()*TW)+.5-TW/2,sh=wide?1:.5;
       gEnd=q-1;
       for(let j=q;j<q+3;j++){R[j].sh=sh;R[j].sc=sc;R[j].air=true}
       R[q+2].pad=true;R[q+2].px=sc;R[q+2].pw=sh;
@@ -238,11 +261,11 @@ function chain(p,n){
   return Math.ceil(z)+3;
 }
 function build(){
-  seed=MAPS[curMap].seed;SPM=MAPS[curMap].spm;R=[];lf=1;TW=4;SL=-2;LZ=[];RK=[];
+  seed=MAPS[curMap].seed;SPM=MAPS[curMap].spm;DEN=MAPS[curMap].den;R=[];lf=1;TW=4;SL=-2;LZ=[];RK=[];
   for(let i=0;i<N;i++)R.push({c:0,tw:4,hw:2,sc:0,sh:2,gap:false,obs:null,drops:null,hams:null,spin:null,lz:null,gem:null,pad:false,px:0,pw:.5,air:false,got:false,gy:.9});
   const setW=a=>{for(let i=a;i<N;i++){const r=R[i];r.tw=TW;r.c=SL+TW/2;r.hw=TW/2;r.sh=TW/2}};
   setW(0);
-  let g=16;
+  let g=16,hasCr=false;
   while(g<N-30){
     // 트랙 폭(3~6칸)과 좌우 위치가 패턴 사이에서 바뀐다 (이전 구간과 2칸 이상 겹치게)
     if(g>30&&g<N-110&&rnd()<.4){
@@ -255,13 +278,13 @@ function build(){
       }
       lf=clamp(lf+ol-SL,0,TW-1);
     }
-    const k=rnd(),sp=Math.round(spd(g)*.28)+Math.floor(rnd()*2);
-    const MP=MAPS[curMap],PATS=[['jump',10],['jumps',10],['rain',9],['wall',6],['gate',7],['laser',9],['slam',8],['spin',8],['slide',8],['rocket',12],['plain',13]];
-    let tot=0;const ws=PATS.map(q=>{const w=q[1]*(MP.mul[q[0]]||1);tot+=w;return w});
+    const k=rnd(),sp=Math.round(spd(g)*.28*DEN)+Math.floor(rnd()*2);
+    const MP=MAPS[curMap],PATS=[['jump',10],['jumps',10],['rain',9],['wall',6],['gate',7],['laser',9],['slam',8],['spin',8],['slide',8],['rocket',12],['crumble',8],['plain',13]];
+    let tot=0;const ws=PATS.map(q=>{const w=q[1]*(MP.mul[q[0]]||1)*Math.max(.1,1-Math.abs(PT[q[0]]-(1+(MP.diff-1)*.45))*.5);tot+=w;return w});
     let x=rnd()*tot,pi=0;while(pi<ws.length-1&&x>=ws[pi]){x-=ws[pi];pi++}
-    const pn=PATS[pi][0];
+    let pn=PATS[pi][0];if(!hasCr&&g>N*.45)pn='crumble';if(pn==='crumble')hasCr=true;
     if(pn==='jump')g=chain(g,1);
-    else if(pn==='jumps')g=chain(g,2+Math.floor(rnd()*3));
+    else if(pn==='jumps')g=chain(g,2+Math.floor(rnd()*(MAPS[curMap].diff>=6?2:1)));
     else if(pn==='rain')g=rain(g)+sp;
     else if(pn==='wall')g=wallRun(g)+sp;
     else if(pn==='gate')g=gates(g)+sp;
@@ -270,11 +293,12 @@ function build(){
     else if(pn==='spin')g=spinners(g)+sp;
     else if(pn==='slide')g=slider(g)+sp;
     else if(pn==='rocket')g=rockets(g)+sp;
+    else if(pn==='crumble')g=crumble(g)+sp;
     else{const n=1+Math.floor(rnd()*3);for(let q=0;q<n;q++){R[g].obs=mk(g);g+=sp}}
   }
   // 보석 20개: 앞뒤 6줄 동안 같은 줄(세로 방향)에 위험물이 없고 점프/움직이는 바닥 구간도 아닌 칸에만 둔다
   const hzx=k=>{const r=R[k],b=[];[...(r.obs||[]),...(r.drops||[]),...(r.hams||[]),...(r.lz||[])].forEach(o=>b.push(r.c+o.x));(r.spin||[]).forEach(o=>{for(let d=-1;d<=1;d++)b.push(r.c+o.x+d)});return b};
-  const badRow=k=>R[k].gap||R[k].air||R[k].pad||R[k].mv||R[k].rk;
+  const badRow=k=>R[k].gap||R[k].air||R[k].pad||R[k].mv||R[k].rk||R[k].cr;
   const clear=(j,w)=>{
     const r=R[j],xs=[];
     if(badRow(j))return xs;
@@ -348,7 +372,7 @@ function step(dt){
   const i=Math.min(Math.floor(P.z),N-1),r=R[i],fz=P.z-i;if(r.mv)r.sc=mvSc(r,i);
   P.tx=clamp(P.tx,r.c-r.hw-3,r.c+r.hw+3);P.x+=(P.tx-P.x)*1;P.x=clamp(P.x,r.c-r.hw-3,r.c+r.hw+3);
   if(!P.fall){
-    const onTrack=!(r.gap&&fz>.3)&&Math.abs(P.x-(r.c+r.sc))<=r.sh+.25&&!(fz>.3&&r.rk&&r.rk.some(t=>t.g.st>=1&&Math.abs(P.x-(r.c+t.x))<.45));
+    const onTrack=!(r.gap&&fz>.3)&&Math.abs(P.x-(r.c+r.sc))<=r.sh+.25&&!(fz>.3&&r.rk&&r.rk.some(t=>t.g.st>=1&&Math.abs(P.x-(r.c+t.x))<.45))&&!(r.cr&&crAge(r)>=CRD);if(r.cr&&r.cr.t==null&&onTrack&&P.y<=.05)r.cr.t=P.t;
     if(P.y<=0){if(onTrack){P.y=0;P.vy=0}else P.fall=true}
     if(r.pad&&Math.abs(P.x-(r.c+r.px))<r.pw+.3&&P.y<=.05&&P.vy<=0&&onTrack){P.vy=JV;P.y=.06;beep(520,.12)}
     if(r.drops&&fz>.2&&fz<.9)r.drops.forEach(d=>{if(Math.abs(P.x-(r.c+d.x))<.58&&P.y+.6>d.y&&P.y<d.y+.45)die()});
@@ -364,10 +388,38 @@ function step(dt){
   let cs=0,cn=0;for(let j=i;j<Math.min(N,i+12);j++){cs+=R[j].c;cn++}camX+=(cs/cn-camX)*Math.min(1,dt*3);
   document.getElementById('fill').style.width=Math.min(100,P.z/N*100)+'%';
 }
-function die(){if(state!=='play')return;state='over';beep(120,.3);shake=.3;addW(gems);show('실패!',`진행률 ${Math.floor(P.z/N*100)}% · 보석 ${gems}/${GEMS}`,'다시 하기')}
-function win(){if(state!=='play')return;state='over';beep(990,.4);const id=MAPS[curMap].id,b=ld(id),first=!b.clear;b.clear=1;if(gems>(b.gems||0))b.gems=gems;sv(id,b);addW(gems);show('클리어!',`보석 ${gems}/${GEMS} (+◆${gems}) · 최고 ${b.gems}개\n`+(first?`🔑 열쇠 획득! (${keyCount()}/${MAPS.length})`:'🔑 이미 가진 열쇠예요'),'다시 하기')}
-function show(t,m,b){document.getElementById('t').textContent=t;document.getElementById('m').textContent=m;document.getElementById('go').textContent=b;document.getElementById('ov').style.display='flex'}
-document.getElementById('go').onclick=e=>{e.stopPropagation();reset();state='play';document.getElementById('ov').style.display='none'};
+// 비밀 조건(맵 번호 0부터): 5번째(심해) 10% 전 사망 -> 곧바로 2번째(우주) 10% 전 사망 -> 3번째(눈꽃) 20% 전 사망.
+// 순서가 어긋나거나 다른 플레이가 끼면 처음부터 다시.
+const RULE=[[4,10],[1,10],[2,20]];let SEQ=0,RIFT=false,rt=0;
+function seqDie(prog){
+  if(MAPS[curMap].hidden){SEQ=0;return false}
+  const r=RULE[SEQ];
+  if(curMap===r[0]&&prog<r[1])SEQ++;
+  else SEQ=(curMap===RULE[0][0]&&prog<RULE[0][1])?1:0;
+  if(SEQ>=RULE.length){SEQ=0;return true}
+  return false;
+}
+function riftOpen(){
+  RIFT=true;
+  show('🌀 균열이 열렸다…','발밑이 일그러지며 알 수 없는 곳으로 빨려 들어간다.','🌀 들어가기');
+  const my=++rt;setTimeout(()=>{if(RIFT&&my===rt)startRift()},2600);
+}
+function startRift(){
+  RIFT=false;curMap=MAPS.findIndex(m=>m.hidden);try{localStorage.setItem('rs_hid','1')}catch(e){}
+  reset();state='play';$('home').style.display='none';$('ov').style.display='none';$('hud').style.display='flex';
+}
+function die(){if(state!=='play')return;state='over';beep(120,.3);shake=.3;addW(gems);const prog=Math.floor(P.z/N*100);if(seqDie(prog)){riftOpen();return}show('실패!',`진행률 ${prog}% · 보석 ${gems}/${GEMS}`,'다시 하기')}
+function win(){if(state!=='play')return;state='over';SEQ=0;beep(990,.4);const id=MAPS[curMap].id,b=ld(id),first=!b.clear;b.clear=1;if(gems>(b.gems||0))b.gems=gems;sv(id,b);addW(gems);show('클리어!',`보석 ${gems}/${GEMS} (+◆${gems}) · 최고 ${b.gems}개\n`+(MAPS[curMap].hidden?'🌀 균열을 돌파했다!':first?`🔑 열쇠 획득! (보유 ${keyAvail()}개)`:'🔑 이미 가진 열쇠예요'),'다시 하기')}
+function show(t,m,b){
+  const hd=MAPS[curMap].hidden&&!RIFT;
+  document.getElementById('t').textContent=t;
+  document.getElementById('m').textContent=hd?m+'\n🌀 비밀 조건으로만 다시 들어올 수 있어요':m;
+  document.getElementById('go').textContent=b;
+  document.getElementById('go').style.display=hd?'none':'';
+  document.getElementById('hm').style.display=RIFT?'none':'';
+  document.getElementById('ov').style.display='flex';
+}
+document.getElementById('go').onclick=e=>{e.stopPropagation();if(RIFT){startRift();return}reset();state='play';document.getElementById('ov').style.display='none'};
 
 // ---- 렌더링 ----
 let camZ=0,hy=0,F=0,H0=210,fogK=0,FR=0,FGc=0,FB=0;
@@ -444,6 +496,15 @@ function drawRk(r,i,t){
   box(x-.16,x+.16,i+.4,i+.6,Math.max(-.3,y-2.4),y,52,100,70);
   box(x-.46,x+.46,i+.04,i+.96,y,y+.14,12,88,50);
 }
+// 떨어지는 발판 조각들 (칸마다 조금씩 시간차로 떨어진다)
+function drawCr(r,i){
+  const a0=crAge(r)-CRD,sl=r.c+r.sc-r.sh,nt=Math.round(r.sh*2);
+  for(let j=0;j<nt;j++){
+    const a=a0-j*.05,y=a>0?-16*a*a:0;
+    if(y<-14)continue;
+    box(sl+j+.04,sl+j+.96,i+.04,i+.96,y-.12,y,34,45,70);
+  }
+}
 function drawGem(r,i){
   const p=pr(r.c+r.gem,r.gy+Math.sin(P.t*4+i)*.1,i+.5),s=p[2]*.46;
   poly([[p[0]-s*.75,p[1]],[p[0],p[1]-s],[p[0]+s*.75,p[1]]],C(330,90,78));
@@ -461,9 +522,9 @@ function ridge(col,amp,sd,off,sm){
 // 맵 컨셉별 하늘: 별/달/행성/산/오로라/태양/언덕
 function drawSky(MP){
   const id=MP.id,t=P.t,px=-camX*6;
-  if(id==='space'||id==='snow'){
+  if(id==='space'||id==='snow'||id==='hole'||id==='city'||id==='rift'){
     ctx.fillStyle='#fff';
-    for(let k=0,n=id==='space'?90:40;k<n;k++){const x=((hsh(k)*W*1.3+px*(.3+hsh(k+9)*.7))%W+W)%W,z=1+hsh(k+5)*2;ctx.globalAlpha=.35+.65*Math.abs(Math.sin(t*2+k));ctx.fillRect(x,hsh(k+3)*hy*1.15,z,z)}
+    for(let k=0,n=id==='space'||id==='hole'||id==='rift'?90:40;k<n;k++){const x=((hsh(k)*W*1.3+px*(.3+hsh(k+9)*.7))%W+W)%W,z=1+hsh(k+5)*2;ctx.globalAlpha=.35+.65*Math.abs(Math.sin(t*2+k));ctx.fillRect(x,hsh(k+3)*hy*1.15,z,z)}
     ctx.globalAlpha=1;
   }
   if(id==='cloud'){circ(W*.72+px*.3,hy-H*.05,H*.12,hs(50,100,95,.3));circ(W*.72+px*.3,hy-H*.05,H*.07,hs(48,100,93))}
@@ -476,16 +537,40 @@ function drawSky(MP){
     circ(W*.75+px*.3,hy*.42,H*.05,hs(200,30,95));
     for(let b=0;b<3;b++){ctx.strokeStyle=hs(140+b*40,80,60,.16);ctx.lineWidth=hy*.14;ctx.beginPath();for(let x=-10;x<=W+10;x+=W/16){const y=hy*(.3+.17*b)+Math.sin(x*.012+t*.5+b*1.7)*hy*.07;if(x<0)ctx.moveTo(x,y);else ctx.lineTo(x,y)}ctx.stroke()}
     ridge(hs(H0,30,26),.13,1,.2);ridge(hs(H0,35,36),.08,7,.5);
-  }else{
+  }else if(id==='desert'){
     circ(W*.5+px*.4,hy-H*.01,H*.17,hs(38,100,60,.28));circ(W*.5+px*.4,hy-H*.01,H*.11,hs(40,100,72));
     ridge(hs(H0,55,30),.07,3,.3,1);ridge(hs(H0,50,40),.04,9,.6,1);
+  }else if(id==='sea'){
+    ctx.fillStyle=hs(H0+10,70,70,.07);
+    for(let k=0;k<5;k++){const x=W*(.1+k*.22)+px*.3+Math.sin(t*.4+k)*20;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+W*.12,0);ctx.lineTo(x+W*.5-k*40,hy*1.05);ctx.lineTo(x+W*.3-k*40,hy*1.05);ctx.closePath();ctx.fill()}
+  }else if(id==='city'){
+    for(let k=-2;k<=13;k++){
+      const bw=W/10*(.55+.4*hsh(k+3)),bx=k*W/10+px*.3,bh=hy*(.18+.5*hsh(k+11));
+      ctx.fillStyle=hs(H0,40,9+hsh(k)*6);ctx.fillRect(bx,hy-bh,bw,bh+4);
+      for(let wy=0;wy<bh-8;wy+=H*.022)for(let wx=bw*.12;wx<bw*.85;wx+=bw*.28)if(hsh(k*17+wy*.3+wx*.7)>.55){ctx.fillStyle=hs(hsh(k+wy)>.5?50:180+hsh(k)*120,90,68,.85);ctx.fillRect(bx+wx,hy-bh+wy+4,bw*.12,H*.011)}
+    }
+  }else if(id==='lava'){
+    const vx=W*.5+px*.25;
+    circ(vx,hy*.35,H*.2,hs(10,100,50,.1));
+    ctx.fillStyle=hs(H0,45,9);ctx.beginPath();ctx.moveTo(vx-W*.7,hy+6);ctx.lineTo(vx-W*.09,hy*.45);ctx.lineTo(vx+W*.09,hy*.45);ctx.lineTo(vx+W*.7,hy+6);ctx.closePath();ctx.fill();
+    circ(vx,hy*.45,H*.03,hs(25,100,60));
+    ctx.strokeStyle=hs(20,100,55,.8);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(vx-W*.02,hy*.46);ctx.lineTo(vx-W*.12,hy);ctx.moveTo(vx+W*.03,hy*.46);ctx.lineTo(vx+W*.15,hy);ctx.stroke();
+  }else if(id==='rift'){
+    const bx=W*.5+px*.3,by=hy*.5;
+    for(let k=8;k>=0;k--){const rr=H*(.03+k*.035)*(1+.06*Math.sin(t*2+k));ctx.strokeStyle=hs(H0+k*35,90,60,.55-k*.04);ctx.lineWidth=H*.006;ctx.beginPath();ctx.ellipse(bx,by,rr*1.6,rr,0,0,7);ctx.stroke()}
+    circ(bx,by,H*.025,hs(H0+180,100,85));
+    if(Math.floor(t*6)%3===0){ctx.fillStyle=hs(H0+120,90,60,.12);ctx.fillRect(0,hsh(Math.floor(t*6))*hy,W,H*.01)}
+  }else{
+    const bx=W*.5+px*.3,by=hy*.55,r=H*.07;
+    for(let k=3;k>=0;k--){ctx.strokeStyle=hs(30+k*10,100,55+k*8,.55-k*.1);ctx.lineWidth=H*(.012+k*.004);ctx.beginPath();ctx.ellipse(bx,by,r*(1.8+k*.5),r*(.35+k*.1),-.2,0,7);ctx.stroke()}
+    circ(bx,by,r,'#000');circ(bx,by,r*1.12,hs(275,60,30,.25));
   }
 }
 // 트랙 옆에 떠 있는 컨셉 오브젝트
 function drawDeco(r,i,MP){
   if(hsh(i*1.37+MP.seed)>.22||i-camZ<4)return;
   const id=MP.id,side=hsh(i*2.11+MP.seed)<.5?-1:1,x=r.c+side*(r.hw+2.4+hsh(i+MP.seed*.3)*7),u=hsh(i*3.3+MP.seed),v=hsh(i*5.7+MP.seed);
-  const p=pr(x,id==='cloud'?2.5+u*4:id==='space'?-1+u*6:-.6+u*1.2,i+.5),s=p[2];
+  const p=pr(x,id==='cloud'?2.5+u*4:id==='space'||id==='rift'?-1+u*6:-.6+u*1.2,i+.5),s=p[2];
   if(p[0]<-s*4||p[0]>W+s*4)return;
   if(id==='cloud'){
     if(v>.8){circ(p[0],p[1],s*.9,C(350+u*40,70,62));poly([[p[0]-s*.3,p[1]+s*.8],[p[0]+s*.3,p[1]+s*.8],[p[0]+s*.2,p[1]+s*1.3],[p[0]-s*.2,p[1]+s*1.3]],C(30,45,34));return}
@@ -494,13 +579,40 @@ function drawDeco(r,i,MP){
     if(v<.5){const rr=s*(.5+u*.8),pts=[];for(let k=0;k<7;k++){const a=k*.9+u*6,q=rr*(.7+.5*hsh(k+i));pts.push([p[0]+Math.cos(a)*q,p[1]+Math.sin(a)*q*.8])}poly(pts,C(H0,12,38))}
     else if(v<.82){const rr=s*(.9+u);circ(p[0],p[1],rr,C(H0+60+u*80,55,52));ctx.strokeStyle=C(H0+120,50,75);ctx.lineWidth=Math.max(1,rr*.12);ctx.beginPath();ctx.ellipse(p[0],p[1],rr*1.7,rr*.4,-.4,0,7);ctx.stroke()}
     else{const rr=s*(.6+u*.5);poly([[p[0],p[1]-rr*1.5],[p[0]+rr*.7,p[1]],[p[0],p[1]+rr*1.5],[p[0]-rr*.7,p[1]]],C(180,80,66));poly([[p[0],p[1]-rr*1.5],[p[0]+rr*.7,p[1]],[p[0],p[1]]],C(180,85,82))}
-  }else{
+  }else if(id==='snow'||id==='desert'){
     const sn=id==='snow',w=s*(1.4+u*.8),by=p[1]+s*.1;
     poly([[p[0]-w,p[1]+s*.2],[p[0]+w,p[1]+s*.2],[p[0]+w*.35,p[1]+s*1.3],[p[0]-w*.35,p[1]+s*1.3]],sn?C(H0,25,38):C(30,40,28));
     ctx.fillStyle=sn?C(H0,15,93):C(40,55,62);ctx.beginPath();ctx.ellipse(p[0],p[1]+s*.2,w,w*.3,0,0,7);ctx.fill();
     if(sn){for(let k=0;k<3;k++){const wk=s*(1.1-k*.28),yy=by-s*(.5+k*.7);poly([[p[0]-wk,yy+s*.55],[p[0]+wk,yy+s*.55],[p[0],yy-s*.55]],C(150,40,26));poly([[p[0]-wk*.45,yy],[p[0]+wk*.45,yy],[p[0],yy-s*.55]],C(H0,10,96))}}
     else if(v<.5){const bw=s*1.3,hh=s*1.9;poly([[p[0]-bw,by],[p[0],by-hh],[p[0]+bw*.1,by+s*.1]],C(42,60,70));poly([[p[0],by-hh],[p[0]+bw,by],[p[0]+bw*.1,by+s*.1]],C(36,55,50))}
     else{ctx.fillStyle=C(125,45,34);ctx.fillRect(p[0]-s*.22,by-s*1.8,s*.44,s*1.8);circ(p[0],by-s*1.8,s*.22,C(125,45,34));ctx.fillRect(p[0]-s*.7,by-s*1.1,s*.5,s*.26);ctx.fillRect(p[0]-s*.7,by-s*1.5,s*.26,s*.66);ctx.fillRect(p[0]+s*.2,by-s*.8,s*.5,s*.26);ctx.fillRect(p[0]+s*.44,by-s*1.2,s*.26,s*.66)}
+  }else if(id==='sea'){
+    if(v<.4){ctx.strokeStyle=C(190,60,85);ctx.lineWidth=Math.max(1,s*.06);[[0,0,.5],[.7,-.6,.3],[-.5,-.9,.22]].forEach(q=>{ctx.beginPath();ctx.arc(p[0]+q[0]*s,p[1]+q[1]*s,q[2]*s*(1+u*.5),0,7);ctx.stroke()})}
+    else if(v<.75){ctx.fillStyle=C(310,60,68);ctx.beginPath();ctx.ellipse(p[0],p[1],s*.8,s*.6,0,Math.PI,0);ctx.fill();ctx.strokeStyle=C(310,60,78);ctx.lineWidth=Math.max(1,s*.07);for(let k=-2;k<=2;k++){ctx.beginPath();ctx.moveTo(p[0]+k*s*.3,p[1]);ctx.lineTo(p[0]+k*s*.3+Math.sin(P.t*2+k)*s*.15,p[1]+s*1.3);ctx.stroke()}}
+    else{ctx.fillStyle=C(30,90,60);ctx.beginPath();ctx.ellipse(p[0],p[1],s*.7,s*.32,0,0,7);ctx.fill();poly([[p[0]+s*.6,p[1]],[p[0]+s*1.1,p[1]-s*.35],[p[0]+s*1.1,p[1]+s*.35]],C(30,90,60));circ(p[0]-s*.4,p[1]-s*.08,s*.07,C(0,0,10))}
+  }else if(id==='city'){
+    const bw=s*(.9+u*.5),bh=s*(v<.6?2+u*2:.9);
+    ctx.fillStyle=C(H0,40,10);ctx.fillRect(p[0]-bw/2,p[1]-bh,bw,bh);
+    ctx.strokeStyle=C(300+u*60,100,62);ctx.lineWidth=Math.max(1,s*.07);ctx.strokeRect(p[0]-bw/2,p[1]-bh,bw,bh);
+    ctx.fillStyle=C(50,90,68);for(let wy=s*.3;wy<bh-s*.2;wy+=s*.4)ctx.fillRect(p[0]-bw*.3,p[1]-bh+wy,bw*.2,s*.12);
+  }else if(id==='lava'){
+    if(v<.6){const rr=s*(.8+u*.7),pts=[];for(let k=0;k<7;k++){const a=k*.9+u*6,q=rr*(.7+.5*hsh(k+i));pts.push([p[0]+Math.cos(a)*q,p[1]+Math.sin(a)*q*.8])}poly(pts,C(H0,25,14));ctx.strokeStyle=C(22,100,58);ctx.lineWidth=Math.max(1,s*.07);ctx.beginPath();ctx.moveTo(p[0]-rr*.5,p[1]-rr*.2);ctx.lineTo(p[0],p[1]+rr*.1);ctx.lineTo(p[0]+rr*.4,p[1]-rr*.1);ctx.stroke()}
+    else{poly([[p[0]-s*.6,p[1]+s*.6],[p[0]+s*.6,p[1]+s*.6],[p[0],p[1]-s*1.5]],C(15,100,48));poly([[p[0]-s*.38,p[1]+s*.6],[p[0]+s*.38,p[1]+s*.6],[p[0],p[1]-s*.9]],C(32,100,58));poly([[p[0]-s*.18,p[1]+s*.6],[p[0]+s*.18,p[1]+s*.6],[p[0],p[1]-s*.3]],C(52,100,72))}
+  }else if(id==='rift'){
+    const hh=H0+u*200;
+    if(v<.5){
+      ctx.fillStyle=C(0,0,95);ctx.beginPath();ctx.ellipse(p[0],p[1],s*1.1,s*.6,0,0,7);ctx.fill();
+      circ(p[0]+Math.sin(P.t+i)*s*.25,p[1],s*.38,C(hh,90,55));circ(p[0]+Math.sin(P.t+i)*s*.25,p[1],s*.16,C(0,0,5));
+    }else{
+      const q=s*(.7+u*.5);
+      poly([[p[0]-q+s*.2,p[1]-q],[p[0]+q+s*.2,p[1]-q],[p[0]+q+s*.2,p[1]+q],[p[0]-q+s*.2,p[1]+q]],C(hh+120,90,50));
+      poly([[p[0]-q,p[1]-q],[p[0]+q,p[1]-q],[p[0]+q,p[1]+q],[p[0]-q,p[1]+q]],C(hh,70,28));
+      ctx.strokeStyle=C(hh+60,100,70);ctx.lineWidth=Math.max(1,s*.06);ctx.strokeRect(p[0]-q,p[1]-q,q*2,q*2);
+    }
+  }else{
+    if(v<.5){poly([[p[0],p[1]-s],[p[0]+s*.35,p[1]],[p[0],p[1]+s*.8],[p[0]-s*.3,p[1]]],C(280,40,35))}
+    else if(v<.8){ctx.strokeStyle=C(30,100,60);ctx.lineWidth=Math.max(1,s*.1);ctx.beginPath();ctx.ellipse(p[0],p[1],s*1.3,s*.35,-.3,0,7);ctx.stroke()}
+    else{circ(p[0],p[1],s*.6,C(275,60,18));ctx.strokeStyle=C(300,80,60);ctx.lineWidth=Math.max(1,s*.06);ctx.beginPath();ctx.arc(p[0],p[1],s*.6,0,7);ctx.stroke()}
   }
 }
 // ---------- 홈 화면 ----------
@@ -516,18 +628,30 @@ let curSkin=0;try{curSkin=clamp(+localStorage.getItem('rs_skin')||0,0,SKINS.leng
 function wal(){try{return+localStorage.getItem('rs_wallet')||0}catch(e){return 0}}
 function addW(n){try{localStorage.setItem('rs_wallet',wal()+n)}catch(e){}}
 function owned(){try{return JSON.parse(localStorage.getItem('rs_owned'))||[0]}catch(e){return[0]}}
-function keyCount(){return MAPS.filter(m=>ld(m.id).clear).length}
+function keyCount(){return MAPS.filter(m=>!m.hidden&&ld(m.id).clear).length}
+function hidSeen(){try{return localStorage.getItem('rs_hid')==='1'}catch(e){return false}}
+function unl(){try{return JSON.parse(localStorage.getItem('rs_unl'))||[]}catch(e){return[]}}
+function isOpen(i){return !MAPS[i].hidden&&(i<2||unl().includes(MAPS[i].id)||!!ld(MAPS[i].id).clear)}
+function keyAvail(){return keyCount()-unl().length}
+function updSt(){const b=$('st');if(MAPS[curMap].hidden){b.textContent='🔒 비밀 조건으로만 입장할 수 있어요';b.disabled=true}else if(isOpen(curMap)){b.textContent='▶ 플레이';b.disabled=false}else if(keyAvail()>0){b.textContent='🔑 열쇠 1개로 열기';b.disabled=false}else{b.textContent='🔒 열쇠가 필요해요';b.disabled=true}}
+function stGo(){
+  if(MAPS[curMap].hidden)return;
+  if(isOpen(curMap)){startGame();return}
+  if(keyAvail()>0){const u=unl();u.push(MAPS[curMap].id);try{localStorage.setItem('rs_unl',JSON.stringify(u))}catch(e){}buildList()}
+}
 function buildList(){
   const k=keyCount();
-  $('keys').textContent=`열쇠 ${'🔑'.repeat(k)}${'○'.repeat(MAPS.length-k)} (${k}/${MAPS.length})  ·  ◆ ${wal()}`;
+  $('keys').textContent=`🔑 열쇠 ${keyAvail()}개 보유 (획득 ${k}/${NV})  ·  ◆ ${wal()}`;
   $('maps').innerHTML='';
   MAPS.forEach((m,i)=>{
+    if(m.hidden&&!hidSeen())return;
     const b=ld(m.id),c=document.createElement('button');
-    c.className='mrow'+(i===curMap?' sel':'');
+    c.className='mrow'+(i===curMap?' sel':'')+(isOpen(i)?'':' lock')+(m.hidden?' hid':'');
     c.style.background=`linear-gradient(160deg,hsl(${m.hue} ${m.sat}% ${Math.max(18,m.top-14)}%),hsl(${(m.hue+20)%360} ${m.sat}% ${Math.max(28,m.hl-26)}%))`;
-    c.innerHTML=`<span class="ic">${m.icon}</span><span class="tx"><b>${m.name}</b><small>${m.desc}</small><span class="stt">${'★'.repeat(m.diff)+'☆'.repeat(4-m.diff)}${b.clear?' · 🔑 획득':''} · ◆ ${b.gems||0}/${GEMS}</span></span>`;
+    c.innerHTML=`<span class="ic">${m.icon}</span><span class="tx"><b>${m.name}</b><small>${m.desc}</small><span class="stt">${m.hidden?'？？？ · 🔒 비밀 조건으로만 입장'+(b.clear?' · ✅ 돌파':''):'★'.repeat(m.diff)+'☆'.repeat(8-m.diff)+(isOpen(i)?(b.clear?' · 🔑 획득':''):' · 🔒 열쇠 1개로 해금')} · ◆ ${b.gems||0}/${GEMS}</span></span>`;
     c.onclick=()=>selectMap(i);$('maps').appendChild(c);
   });
+  updSt();
 }
 function buildShop(){
   const o=owned();
@@ -553,12 +677,12 @@ function showTab(t){
   $('tb-game').className=g?'on':'';$('tb-shop').className=g?'':'on';
   if(g)buildList();else buildShop();
 }
-function selectMap(i){curMap=i;try{localStorage.setItem('rs_map',i)}catch(e){}reset();buildList()}
-function goHome(){state='menu';$('ov').style.display='none';$('hud').style.display='none';$('home').style.display='flex';reset();showTab('game')}
+function selectMap(i){curMap=i;if(isOpen(i)){try{localStorage.setItem('rs_map',i)}catch(e){}}reset();buildList()}
+function goHome(){if(state==='play')SEQ=0;RIFT=false;state='menu';$('ov').style.display='none';$('hud').style.display='none';$('home').style.display='flex';reset();showTab('game')}
 function startGame(){reset();state='play';$('home').style.display='none';$('ov').style.display='none';$('hud').style.display='flex'}
 function draw(){
   F=H*.8;hy=H*.25;camZ=P.z-7;
-  const MP=MAPS[curMap];H0=(MP.hue+Math.sin(P.t*.15)*MP.drift+360)%360;const hl=MP.hl;
+  const MP=MAPS[curMap];H0=MP.hidden?(MP.hue+P.t*25)%360:(MP.hue+Math.sin(P.t*.15)*MP.drift+360)%360;const hl=MP.hl;
   const fc=rgb(H0,MP.sat+8,hl);FR=fc[0];FGc=fc[1];FB=fc[2];fogK=0;
   let sx=0,sy=0;if(shake>0){sx=(Math.random()-.5)*10;sy=(Math.random()-.5)*10}
   ctx.save();ctx.translate(sx,sy);
@@ -574,7 +698,7 @@ function draw(){
     const r=R[i],z0=Math.max(i,camZ+.5),z1=i+1;
     if(z1<=camZ+.5)continue;
     fogK=clamp((i-P.z-14)/36,0,1);drawDeco(r,i,MP);
-    if(!r.gap){
+    if(!r.gap&&!(r.cr&&crAge(r)>=CRD)){
       const sl=r.c+r.sc-r.sh,sr=r.c+r.sc+r.sh,nt=Math.round(r.sh*2);
       if(!r.rk)poly([pr(sl,0,z0),pr(sr,0,z0),pr(sr,0,z1),pr(sl,0,z1)],C(H0,32,56));
       for(let j=0;j<nt;j++){
@@ -584,6 +708,7 @@ function draw(){
         let h=H0,sa=30,l=isDrop?62:MP.tl;
         if(isPad){h=H0+75;sa=75;l=58}
         if(rt){h=12;sa=88;l=52}
+        if(r.cr){h=34;sa=45;l=70}
         poly([pr(a,0,za),pr(b,0,za),pr(b,0,zb),pr(a,0,zb)],C(h,sa,l));
         poly([pr(a,0,za),pr(b,0,za),pr(b,-.12,za),pr(a,-.12,za)],C(h,sa,l-14));
       }
@@ -592,7 +717,7 @@ function draw(){
       if(camX<sr)poly([pr(sr,0,z0),pr(sr,0,z1),pr(sr,-.7,z1),pr(sr,-.7,z0)],wc);
       if(i>0&&i>=camZ+.5){
         const pv=R[i-1],fc=C(H0,34,40);
-        if(pv.gap)poly([pr(sl,0,i),pr(sr,0,i),pr(sr,-.7,i),pr(sl,-.7,i)],fc);
+        if(pv.gap||(pv.cr&&crAge(pv)>=CRD))poly([pr(sl,0,i),pr(sr,0,i),pr(sr,-.7,i),pr(sl,-.7,i)],fc);
         else{
           const a=pv.c+pv.sc-pv.sh,b=pv.c+pv.sc+pv.sh;
           if(sl<a-.01){const e=Math.min(sr,a);poly([pr(sl,0,i),pr(e,0,i),pr(e,-.7,i),pr(sl,-.7,i)],fc)}
@@ -608,11 +733,14 @@ function draw(){
       if(L.e===i)drawEm(r,i,L);
     });
     if(r.hams)r.hams.forEach(h=>drawHam(r,i,h));
+    if(r.cr&&crAge(r)>=CRD)drawCr(r,i);
     if(r.rk)r.rk.forEach(t=>{if(t.g.st===1)drawRk(r,i,t)});
     if(hb[i])hb[i].forEach(q=>drawSpin(R[q[1]],q[1],q[0],q[2]));
     if(r.gem!=null&&!r.got)drawGem(r,i);
     if(i===pi)ball();
   }
+  if(MP.id==='sea'){ctx.strokeStyle='#fff';ctx.lineWidth=1.5;for(let k=0;k<40;k++){const x=((hsh(k)*W+Math.sin(P.t+k)*14-camX*10*(.4+hsh(k+1)))%W+W)%W,y=H-((P.t*(25+hsh(k+2)*50)+hsh(k+3)*H)%H);ctx.globalAlpha=.25+.4*hsh(k+4);ctx.beginPath();ctx.arc(x,y,2+hsh(k+5)*5,0,7);ctx.stroke()}ctx.globalAlpha=1}
+  if(MP.id==='lava'){ctx.fillStyle='#ff9a3c';for(let k=0;k<50;k++){const x=((hsh(k)*W+Math.sin(P.t*1.3+k)*20-camX*12*(.4+hsh(k+1)))%W+W)%W,y=H-((P.t*(40+hsh(k+2)*80)+hsh(k+3)*H)%H);ctx.globalAlpha=.4+.5*hsh(k+4);ctx.beginPath();ctx.arc(x,y,1+hsh(k+5)*2,0,7);ctx.fill()}ctx.globalAlpha=1}
   if(MP.id==='snow'){ctx.fillStyle='#fff';for(let k=0;k<70;k++){const x=((hsh(k)*W+Math.sin(P.t*.9+k)*18-camX*14*(.4+hsh(k+1)))%W+W)%W,y=(P.t*(50+hsh(k+2)*70)+hsh(k+3)*H)%H;ctx.globalAlpha=.5+.4*hsh(k+4);ctx.beginPath();ctx.arc(x,y,1+hsh(k+5)*2.2,0,7);ctx.fill()}ctx.globalAlpha=1}
   const now=performance.now();FX=FX.filter(f=>now-f.t<450);
   if(FX.length){
@@ -635,7 +763,7 @@ function ball(){
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(p[0],p[1],s,0,7);ctx.fill();
 }
 let last=performance.now();
-reset();showTab('game');$('tb-game').onclick=()=>showTab('game');$('tb-shop').onclick=()=>showTab('shop');$('st').onclick=startGame;$('hm').onclick=goHome;$('hb').onclick=goHome;$('hb').addEventListener('pointerdown',e=>e.stopPropagation());
+if(!isOpen(curMap))curMap=0;reset();showTab('game');$('tb-game').onclick=()=>showTab('game');$('tb-shop').onclick=()=>showTab('shop');$('st').onclick=stGo;$('hm').onclick=goHome;$('hb').onclick=goHome;$('hb').addEventListener('pointerdown',e=>e.stopPropagation());
 function loop(t){
   const dt=Math.min((t-last)/1000,.05);last=t;
   if(shake>0)shake-=dt;
