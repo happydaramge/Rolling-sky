@@ -333,13 +333,15 @@ function build(){
 }
 let P,state='menu',best=0,gems=0,shake=0,camX=0;
 try{best=+localStorage.getItem('rs_best')||0}catch(e){}
-function reset(){build();gems=0;FX=[];P={x:R[0].c,tx:R[0].c,y:0,vy:0,z:1,sp:13.5,fall:false,t:0};camX=P.x;document.getElementById('gems').textContent='◆ 0/'+GEMS}
+function reset(){build();gems=0;FX=[];FGX=null;P={x:R[0].c,tx:R[0].c,y:0,vy:0,z:1,sp:13.5,fall:false,t:0};camX=P.x;document.getElementById('gems').textContent='◆ 0/'+GEMS}
 const keys={};
 addEventListener('keydown',e=>keys[e.key]=1);
 addEventListener('keyup',e=>keys[e.key]=0);
-let dragX=null;
-cv.addEventListener('pointerdown',e=>{dragX=e.clientX});
-cv.addEventListener('pointermove',e=>{if(dragX==null||state!=='play')return;const dx=e.clientX-dragX;dragX=e.clientX;P.tx+=dx/(H*.8/7)});
+let FGX=null,FGO=0;
+const fingerX=e=>{const rc=cv.getBoundingClientRect();return(e.clientX-rc.left)*W/(rc.width||W)};
+cv.addEventListener('pointerdown',e=>{if(state!=='play'||!P)return;FGX=fingerX(e);FGO=(W/2+(P.x-camX)*((F||H*.8)/7))-FGX});
+cv.addEventListener('pointermove',e=>{if(FGX!=null&&state==='play')FGX=fingerX(e)});
+addEventListener('pointerup',()=>{FGX=null});addEventListener('pointercancel',()=>{FGX=null});
 addEventListener('pointerup',()=>{dragX=null});
 let ac;
 function beep(f,d){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.type='triangle';g.gain.value=.08;g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
@@ -370,6 +372,7 @@ function step(dt){
   P.sp=spd(P.z);
   P.z+=P.sp*dt;P.vy-=GR*dt;P.y+=P.vy*dt;
   const i=Math.min(Math.floor(P.z),N-1),r=R[i],fz=P.z-i;if(r.mv)r.sc=mvSc(r,i);
+  if(FGX!=null){P.x=camX+(FGX+FGO-W/2)/((F||H*.8)/7);P.tx=P.x}
   P.tx=clamp(P.tx,r.c-r.hw-3,r.c+r.hw+3);P.x+=(P.tx-P.x)*1;P.x=clamp(P.x,r.c-r.hw-3,r.c+r.hw+3);
   if(!P.fall){
     const onTrack=!(r.gap&&fz>.3)&&Math.abs(P.x-(r.c+r.sc))<=r.sh+.25&&!(fz>.3&&r.rk&&r.rk.some(t=>t.g.st>=1&&Math.abs(P.x-(r.c+t.x))<.45))&&!(r.cr&&crAge(r)>=CRD);if(r.cr&&r.cr.t==null&&onTrack&&P.y<=.05)r.cr.t=P.t;
