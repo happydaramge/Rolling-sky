@@ -68,21 +68,21 @@ let W,H,dpr;
 function rs(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
 addEventListener('resize',rs);rs();
 
-const N=420,GEMS=20,JV=10.5,GR=32,AIRT=.66,SY=.9,SR=.9,HY=1.5;
+const N=480,GEMS=20,JV=10.5,GR=32,AIRT=.66,SY=.9,SR=.9,HY=1.5;
 function spd(z){return Math.min(14+z*.014,22)*SPM}
 let R=[],seed=7,lf=1;
 function rnd(){seed=(seed*16807)%2147483647;return seed/2147483647}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const MAPS=[
- {id:'cloud',name:'구름 위 산책',icon:'☁️',desc:'푸른 하늘 위를 달려요. 점프와 가시가 중심인 입문 맵.',seed:1234,hue:205,drift:8,sat:55,top:60,hl:85,bot:52,tl:77,diff:1,spm:1,den:.95,mul:{jump:1.4,jumps:1.1,crumble:.8,laser:.3,spin:.6,rocket:.5,slam:.7,wall:.8}},
- {id:'space',name:'별빛 우주',icon:'🪐',desc:'행성과 별 사이를 지나가요. 레이저와 로켓 바닥이 많아요.',seed:4242,hue:262,drift:12,sat:55,top:14,hl:30,bot:10,tl:74,diff:2,spm:1.04,den:.85,mul:{laser:2,rocket:1.6,spin:1.3,rain:.6,plain:.8}},
- {id:'snow',name:'눈꽃 설원',icon:'❄️',desc:'눈 내리는 산악 지대. 흔들리는 바닥과 고드름 가시가 나와요.',seed:777,hue:215,drift:6,sat:50,top:38,hl:78,bot:32,tl:88,diff:3,spm:1.08,den:.76,mul:{slide:1.8,rain:1.6,gate:1.2,crumble:1.3,laser:.7,plain:.8}},
- {id:'desert',name:'황금 사막',icon:'🏜️',desc:'뜨거운 노을 사막. 망치, 벽, 점프가 한꺼번에 몰려와요.',seed:9001,hue:28,drift:6,sat:70,top:46,hl:76,bot:34,tl:78,diff:4,spm:1.12,den:.62,mul:{slam:1.7,spin:1.5,wall:1.5,gate:1.4,jumps:1.3,rocket:1.2,laser:1.1,slide:.8,plain:.6}},
- {id:'sea',name:'심해 정원',icon:'🌊',desc:'빛이 닿는 깊은 바다. 부서지는 발판과 흔들리는 바닥이 많아요.',seed:31337,hue:195,drift:6,sat:60,top:30,hl:55,bot:18,tl:80,diff:5,spm:1.16,den:.54,mul:{slide:1.6,crumble:1.2,laser:1.3,rain:1.3,jump:1.2,plain:.6}},
- {id:'city',name:'네온 도시',icon:'🌆',desc:'불 켜진 밤의 도시. 레이저와 도는 망치가 쉴 틈 없이 나와요.',seed:2077,hue:300,drift:14,sat:60,top:12,hl:28,bot:8,tl:72,diff:6,spm:1.2,den:.53,mul:{laser:1.8,spin:1.6,rocket:1.5,gate:1.4,jumps:1.3,plain:.5}},
- {id:'lava',name:'용암 화산',icon:'🌋',desc:'끓는 용암 위의 길. 로켓 바닥과 망치가 쏟아져요.',seed:6666,hue:8,drift:6,sat:75,top:14,hl:36,bot:8,tl:70,diff:7,spm:1.24,den:.47,mul:{rocket:2,slam:1.8,spin:1.4,crumble:1.4,wall:1.4,jumps:1.3,plain:.4}},
- {id:'hole',name:'블랙홀',icon:'🕳️',desc:'모든 장애물이 총출동하는 가장 어려운 맵.',seed:1313,hue:275,drift:10,sat:50,top:6,hl:20,bot:4,tl:68,diff:8,spm:1.28,den:.42,mul:{laser:1.6,rocket:1.6,spin:1.6,slam:1.6,slide:1.5,crumble:1.6,jumps:1.6,wall:1.3,gate:1.3,rain:1.3,plain:.2}},
- {id:'rift',hidden:true,name:'균열의 방',icon:'🌀',desc:'정해진 조건으로만 들어갈 수 있는 비밀 공간.',seed:8888,hue:300,drift:0,sat:75,top:8,hl:24,bot:4,tl:74,diff:7,spm:1.18,den:.58,mul:{laser:1.3,rocket:1.3,spin:1.3,slam:1.3,slide:1.3,crumble:1.3,jumps:1.3,wall:1.1,gate:1.1,rain:1.1,plain:.4}}
+ {id:'cloud',name:'구름 위 산책',icon:'☁️',desc:'푸른 하늘 위를 달려요. 점프와 가시가 중심인 입문 맵.',seed:1234,hue:205,drift:8,sat:55,top:60,hl:85,bot:52,tl:77,diff:1,spm:1.02,den:0.88,mul:{jump:1.4,jumps:1.1,crumble:.8,laser:.3,spin:.6,rocket:.5,slam:.7,wall:.8}},
+ {id:'space',name:'별빛 우주',icon:'🪐',desc:'행성과 별 사이를 지나가요. 레이저와 로켓 바닥이 많아요.',seed:4242,hue:262,drift:12,sat:55,top:14,hl:30,bot:10,tl:74,diff:2,spm:1.06,den:0.79,mul:{laser:2,rocket:1.6,spin:1.3,rain:.6,plain:.8}},
+ {id:'snow',name:'눈꽃 설원',icon:'❄️',desc:'눈 내리는 산악 지대. 흔들리는 바닥과 고드름 가시가 나와요.',seed:777,hue:215,drift:6,sat:50,top:38,hl:78,bot:32,tl:88,diff:3,spm:1.1,den:0.71,mul:{slide:1.8,rain:1.6,gate:1.2,crumble:1.3,laser:.7,plain:.8}},
+ {id:'desert',name:'황금 사막',icon:'🏜️',desc:'뜨거운 노을 사막. 망치, 벽, 점프가 한꺼번에 몰려와요.',seed:9001,hue:28,drift:6,sat:70,top:46,hl:76,bot:34,tl:78,diff:4,spm:1.14,den:0.58,mul:{slam:1.7,spin:1.5,wall:1.5,gate:1.4,jumps:1.3,rocket:1.2,laser:1.1,slide:.8,plain:.6}},
+ {id:'sea',name:'심해 정원',icon:'🌊',desc:'빛이 닿는 깊은 바다. 부서지는 발판과 흔들리는 바닥이 많아요.',seed:31337,hue:195,drift:6,sat:60,top:30,hl:55,bot:18,tl:80,diff:5,spm:1.18,den:0.5,mul:{slide:1.6,crumble:1.2,laser:1.3,rain:1.3,jump:1.2,plain:.6}},
+ {id:'city',name:'네온 도시',icon:'🌆',desc:'불 켜진 밤의 도시. 레이저와 도는 망치가 쉴 틈 없이 나와요.',seed:2077,hue:300,drift:14,sat:60,top:12,hl:28,bot:8,tl:72,diff:6,spm:1.22,den:0.49,mul:{laser:1.8,spin:1.6,rocket:1.5,gate:1.4,jumps:1.3,plain:.5}},
+ {id:'lava',name:'용암 화산',icon:'🌋',desc:'끓는 용암 위의 길. 로켓 바닥과 망치가 쏟아져요.',seed:6666,hue:8,drift:6,sat:75,top:14,hl:36,bot:8,tl:70,diff:7,spm:1.26,den:0.44,mul:{rocket:2,slam:1.8,spin:1.4,crumble:1.4,wall:1.4,jumps:1.3,plain:.4}},
+ {id:'hole',name:'블랙홀',icon:'🕳️',desc:'모든 장애물이 총출동하는 가장 어려운 맵.',seed:1313,hue:275,drift:10,sat:50,top:6,hl:20,bot:4,tl:68,diff:8,spm:1.3,den:0.39,mul:{laser:1.6,rocket:1.6,spin:1.6,slam:1.6,slide:1.5,crumble:1.6,jumps:1.6,wall:1.3,gate:1.3,rain:1.3,plain:.2}},
+ {id:'rift',hidden:true,name:'균열의 방',icon:'🌀',desc:'균열 너머의 비밀 공간. 극악의 난이도.',seed:8888,hue:300,drift:0,sat:75,top:8,hl:24,bot:4,tl:74,diff:9,spm:1.38,den:.34,mul:{laser:1.2,rocket:2.4,spin:2.4,slam:2.4,slide:1.8,crumble:.9,jumps:1,wall:2.2,gate:2.4,rain:2.4,plain:.6}}
 ];
 const NV=MAPS.filter(m=>!m.hidden).length;
 let curMap=0,DEN=1;
@@ -152,7 +152,7 @@ function rain(g){
 function lasers(g){
   let L=14+Math.floor(rnd()*9);L=Math.min(L,N-22-g);if(L<8)return N;
   lf=clamp(lf+shift(),0,TW-1);
-  pick(lf,MAPS[curMap].diff>=5?1+Math.floor(rnd()*2):1).forEach(q=>{
+  pick(lf,MAPS[curMap].diff>=9?2+Math.floor(rnd()*2):MAPS[curMap].diff>=5?1+Math.floor(rnd()*2):1).forEach(q=>{
     const o={x:lx(q),s:g,e:g+L-1,st:0,f:g};LZ.push(o);
     for(let j=g;j<g+L;j++)(R[j].lz=R[j].lz||[]).push(o);
   });
@@ -225,12 +225,12 @@ function rockets(g){
 const CRD=.16,PT={jump:2,jumps:3.6,rain:2,wall:3,gate:3,laser:3.6,slam:2,spin:3,slide:3,rocket:3,crumble:2,plain:1.2};
 function crAge(r){return r.cr&&r.cr.t!=null?P.t-r.cr.t:-1}
 function crumble(g){
-  const L=10+Math.floor(rnd()*7),narrow=MAPS[curMap].diff>=6&&rnd()<.5,sh=narrow?.5:1,n=narrow?TW:TW-1;
+  const L=10+Math.floor(rnd()*7),sh=1,n=TW-1;
   let j=Math.floor(rnd()*n),keep=0;
   for(let k=0;k<L;k++){
     if(keep<=0){j=clamp(j+(rnd()<.5?-1:1),0,n-1);keep=(MAPS[curMap].diff>=6?1:2)+Math.floor(rnd()*2)}
     keep--;
-    const r=R[g+k];r.sh=sh;r.sc=(narrow?j+.5:j+1)-TW/2;r.cr={t:null};
+    const r=R[g+k];r.sh=sh;r.sc=j+1-TW/2;r.cr={t:null};
   }
   return g+L;
 }
@@ -268,7 +268,7 @@ function build(){
   let g=16,hasCr=false;
   while(g<N-30){
     // 트랙 폭(3~6칸)과 좌우 위치가 패턴 사이에서 바뀐다 (이전 구간과 2칸 이상 겹치게)
-    if(g>30&&g<N-110&&rnd()<.4){
+    if(g>30&&g<N-110&&rnd()<.3){
       const ol=SL,ws=[3,4,4],tw=ws[Math.floor(rnd()*ws.length)];
       const Lt=tw===4?-2:(rnd()<.5?-2:-1),Rt=Lt+tw;
       let a=SL,b=SL+TW;
@@ -284,7 +284,7 @@ function build(){
     let x=rnd()*tot,pi=0;while(pi<ws.length-1&&x>=ws[pi]){x-=ws[pi];pi++}
     let pn=PATS[pi][0];if(!hasCr&&g>N*.45)pn='crumble';if(pn==='crumble')hasCr=true;
     if(pn==='jump')g=chain(g,1);
-    else if(pn==='jumps')g=chain(g,2+Math.floor(rnd()*(MAPS[curMap].diff>=6?2:1)));
+    else if(pn==='jumps')g=chain(g,2+Math.floor(rnd()*(MAPS[curMap].diff>=9?3:MAPS[curMap].diff>=6?2:1)));
     else if(pn==='rain')g=rain(g)+sp;
     else if(pn==='wall')g=wallRun(g)+sp;
     else if(pn==='gate')g=gates(g)+sp;
@@ -414,11 +414,10 @@ function startRift(){
 function die(){if(state!=='play')return;state='over';beep(120,.3);shake=.3;addW(gems);const prog=Math.floor(P.z/N*100);if(seqDie(prog)){riftOpen();return}show('실패!',`진행률 ${prog}% · 보석 ${gems}/${GEMS}`,'다시 하기')}
 function win(){if(state!=='play')return;state='over';SEQ=0;beep(990,.4);const id=MAPS[curMap].id,b=ld(id),first=!b.clear;b.clear=1;if(gems>(b.gems||0))b.gems=gems;sv(id,b);addW(gems);show('클리어!',`보석 ${gems}/${GEMS} (+◆${gems}) · 최고 ${b.gems}개\n`+(MAPS[curMap].hidden?'🌀 균열을 돌파했다!':first?`🔑 열쇠 획득! (보유 ${keyAvail()}개)`:'🔑 이미 가진 열쇠예요'),'다시 하기')}
 function show(t,m,b){
-  const hd=MAPS[curMap].hidden&&!RIFT;
   document.getElementById('t').textContent=t;
-  document.getElementById('m').textContent=hd?m+'\n🌀 비밀 조건으로만 다시 들어올 수 있어요':m;
+  document.getElementById('m').textContent=m;
   document.getElementById('go').textContent=b;
-  document.getElementById('go').style.display=hd?'none':'';
+  document.getElementById('go').style.display='';
   document.getElementById('hm').style.display=RIFT?'none':'';
   document.getElementById('ov').style.display='flex';
 }
@@ -634,11 +633,11 @@ function owned(){try{return JSON.parse(localStorage.getItem('rs_owned'))||[0]}ca
 function keyCount(){return MAPS.filter(m=>!m.hidden&&ld(m.id).clear).length}
 function hidSeen(){try{return localStorage.getItem('rs_hid')==='1'}catch(e){return false}}
 function unl(){try{return JSON.parse(localStorage.getItem('rs_unl'))||[]}catch(e){return[]}}
-function isOpen(i){return !MAPS[i].hidden&&(i<2||unl().includes(MAPS[i].id)||!!ld(MAPS[i].id).clear)}
+function isOpen(i){return MAPS[i].hidden?hidSeen():(i<2||unl().includes(MAPS[i].id)||!!ld(MAPS[i].id).clear)}
 function keyAvail(){return keyCount()-unl().length}
-function updSt(){const b=$('st');if(MAPS[curMap].hidden){b.textContent='🔒 비밀 조건으로만 입장할 수 있어요';b.disabled=true}else if(isOpen(curMap)){b.textContent='▶ 플레이';b.disabled=false}else if(keyAvail()>0){b.textContent='🔑 열쇠 1개로 열기';b.disabled=false}else{b.textContent='🔒 열쇠가 필요해요';b.disabled=true}}
+function updSt(){const b=$('st');if(MAPS[curMap].hidden&&!hidSeen()){b.textContent='🔒 비밀 조건으로만 입장할 수 있어요';b.disabled=true}else if(isOpen(curMap)){b.textContent='▶ 플레이';b.disabled=false}else if(keyAvail()>0){b.textContent='🔑 열쇠 1개로 열기';b.disabled=false}else{b.textContent='🔒 열쇠가 필요해요';b.disabled=true}}
 function stGo(){
-  if(MAPS[curMap].hidden)return;
+  if(MAPS[curMap].hidden&&!hidSeen())return;
   if(isOpen(curMap)){startGame();return}
   if(keyAvail()>0){const u=unl();u.push(MAPS[curMap].id);try{localStorage.setItem('rs_unl',JSON.stringify(u))}catch(e){}buildList()}
 }
@@ -651,7 +650,7 @@ function buildList(){
     const b=ld(m.id),c=document.createElement('button');
     c.className='mrow'+(i===curMap?' sel':'')+(isOpen(i)?'':' lock')+(m.hidden?' hid':'');
     c.style.background=`linear-gradient(160deg,hsl(${m.hue} ${m.sat}% ${Math.max(18,m.top-14)}%),hsl(${(m.hue+20)%360} ${m.sat}% ${Math.max(28,m.hl-26)}%))`;
-    c.innerHTML=`<span class="ic">${m.icon}</span><span class="tx"><b>${m.name}</b><small>${m.desc}</small><span class="stt">${m.hidden?'？？？ · 🔒 비밀 조건으로만 입장'+(b.clear?' · ✅ 돌파':''):'★'.repeat(m.diff)+'☆'.repeat(8-m.diff)+(isOpen(i)?(b.clear?' · 🔑 획득':''):' · 🔒 열쇠 1개로 해금')} · ◆ ${b.gems||0}/${GEMS}</span></span>`;
+    c.innerHTML=`<span class="ic">${m.icon}</span><span class="tx"><b>${m.name}</b><small>${m.desc}</small><span class="stt">${'★'.repeat(m.diff)+'☆'.repeat(Math.max(0,8-m.diff))}${m.hidden?(b.clear?' · ✅ 돌파':''):(isOpen(i)?(b.clear?' · 🔑 획득':''):' · 🔒 열쇠 1개로 해금')} · ◆ ${b.gems||0}/${GEMS}</span></span>`;
     c.onclick=()=>selectMap(i);$('maps').appendChild(c);
   });
   updSt();
