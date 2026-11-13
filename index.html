@@ -82,7 +82,7 @@ const MAPS=[
  {id:'city',name:'네온 도시',icon:'🌆',desc:'불 켜진 밤의 도시. 레이저와 도는 망치가 쉴 틈 없이 나와요.',seed:2077,hue:300,drift:14,sat:60,top:12,hl:28,bot:8,tl:72,diff:6,spm:1.22,den:0.49,mul:{laser:1.8,spin:1.6,rocket:1.5,gate:1.4,jumps:1.3,plain:.5}},
  {id:'lava',name:'용암 화산',icon:'🌋',desc:'끓는 용암 위의 길. 로켓 바닥과 망치가 쏟아져요.',seed:6666,hue:8,drift:6,sat:75,top:14,hl:36,bot:8,tl:70,diff:7,spm:1.26,den:0.44,mul:{rocket:2,slam:1.8,spin:1.4,crumble:1.4,wall:1.4,jumps:1.3,plain:.4}},
  {id:'hole',name:'블랙홀',icon:'🕳️',desc:'모든 장애물이 총출동하는 가장 어려운 맵.',seed:1313,hue:275,drift:10,sat:50,top:6,hl:20,bot:4,tl:68,diff:8,spm:1.3,den:0.39,mul:{laser:1.6,rocket:1.6,spin:1.6,slam:1.6,slide:1.5,crumble:1.6,jumps:1.6,wall:1.3,gate:1.3,rain:1.3,plain:.2}},
- {id:'rift',hidden:true,name:'균열의 방',icon:'🌀',desc:'균열 너머의 비밀 공간. 극악의 난이도.',seed:8888,hue:300,drift:0,sat:75,top:8,hl:24,bot:4,tl:74,diff:9,spm:1.38,den:.34,mul:{laser:1.2,rocket:2.4,spin:2.4,slam:2.4,slide:1.8,crumble:.9,jumps:1,wall:2.2,gate:2.4,rain:2.4,plain:.6}}
+ {id:'rift',hidden:true,name:'균열의 방',icon:'🌀',desc:'균열 너머의 비밀 공간. 극악의 난이도.',seed:8888,hue:300,drift:0,sat:75,top:8,hl:24,bot:4,tl:74,diff:9,spm:1.38,den:.27,mul:{laser:1.2,rocket:2.4,spin:2.4,slam:2.4,slide:1.6,crumble:.8,jumps:1,wall:2.2,gate:2.4,rain:2.4,plain:1.2}}
 ];
 const NV=MAPS.filter(m=>!m.hidden).length;
 let curMap=0,DEN=1;
@@ -222,7 +222,7 @@ function rockets(g){
   return g;
 }
 // 떨어지는 발판: 구멍 위의 좁은 길. 한 줄을 밟으면 지나가는 건 되지만 곧 아래로 떨어져 사라진다
-const CRD=.16,PT={jump:2,jumps:3.6,rain:2,wall:3,gate:3,laser:3.6,slam:2,spin:3,slide:3,rocket:3,crumble:2,plain:1.2};
+const CRD=.26,PT={jump:2,jumps:3.6,rain:2,wall:3,gate:3,laser:3.6,slam:2,spin:3,slide:3,rocket:3,crumble:2,plain:1.2};
 function crAge(r){return r.cr&&r.cr.t!=null?P.t-r.cr.t:-1}
 function crumble(g){
   const L=10+Math.floor(rnd()*7),sh=1,n=TW-1;
@@ -375,7 +375,7 @@ function step(dt){
   if(FGX!=null){P.x=camX+(FGX+FGO-W/2)/((F||H*.8)/7);P.tx=P.x}
   P.tx=clamp(P.tx,r.c-r.hw-3,r.c+r.hw+3);P.x+=(P.tx-P.x)*1;P.x=clamp(P.x,r.c-r.hw-3,r.c+r.hw+3);
   if(!P.fall){
-    const onTrack=!(r.gap&&fz>.3)&&Math.abs(P.x-(r.c+r.sc))<=r.sh+.25&&!(fz>.3&&r.rk&&r.rk.some(t=>t.g.st>=1&&Math.abs(P.x-(r.c+t.x))<.45))&&!(r.cr&&crAge(r)>=CRD);if(r.cr&&r.cr.t==null&&onTrack&&P.y<=.05)r.cr.t=P.t;
+    const onTrack=!(r.gap&&fz>.3)&&Math.abs(P.x-(r.c+r.sc))<=r.sh+(r.cr?.42:.25)&&!(fz>.3&&r.rk&&r.rk.some(t=>t.g.st>=1&&Math.abs(P.x-(r.c+t.x))<.45))&&!(r.cr&&crAge(r)>=CRD);if(r.cr&&r.cr.t==null&&onTrack&&P.y<=.05)r.cr.t=P.t;
     if(P.y<=0){if(onTrack){P.y=0;P.vy=0}else P.fall=true}
     if(r.pad&&Math.abs(P.x-(r.c+r.px))<r.pw+.3&&P.y<=.05&&P.vy<=0&&onTrack){P.vy=JV;P.y=.06;beep(520,.12)}
     if(r.drops&&fz>.2&&fz<.9)r.drops.forEach(d=>{if(Math.abs(P.x-(r.c+d.x))<.58&&P.y+.6>d.y&&P.y<d.y+.45)die()});
@@ -491,20 +491,33 @@ function drawSpin(r,j,h,a){
    [z+dz,()=>obox(x+dx,z+dz,dx,dz,.28,.4,0,.6,215,16,44)]].sort((p,q)=>q[0]-p[0]).forEach(p=>p[1]());
 }
 // 발사되어 올라가는 바닥 한 칸 (아래에 불꽃)
+// 로켓 모형: 흰 몸체 + 빨간 띠/노즈콘/날개 + 창문
+function rocketModel(x,z,y0){
+  const b=.19,h=.8;
+  box(x-b,x+b,z-b,z+b,y0,y0+h,0,0,84);
+  box(x-b-.015,x+b+.015,z-b-.015,z+b+.015,y0+h*.38,y0+h*.55,6,85,50);
+  const A=pr(x-b,y0+h,z-b),B=pr(x+b,y0+h,z-b),K=pr(x+b,y0+h,z+b),L=pr(x-b,y0+h,z+b),T=pr(x,y0+h+.5,z);
+  poly(camX<x?[L,A,T]:[B,K,T],C(6,80,34));
+  poly([A,B,T],C(6,85,50));
+  box(x-b-.17,x-b,z-.05,z+.05,y0,y0+.3,6,85,44);
+  box(x+b,x+b+.17,z-.05,z+.05,y0,y0+.3,6,85,44);
+  const w=pr(x,y0+h*.74,z-b);circ(w[0],w[1],w[2]*.075,C(205,75,62));
+}
 function drawRk(r,i,t){
   const x=r.c+t.x,y=t.g.y;
   if(y>13)return;
   box(x-.3,x+.3,i+.3,i+.7,Math.max(-.3,y-1.5),y,38,100,55);
   box(x-.16,x+.16,i+.4,i+.6,Math.max(-.3,y-2.4),y,52,100,70);
   box(x-.46,x+.46,i+.04,i+.96,y,y+.14,12,88,50);
+  rocketModel(x,i+.5,y+.14);
 }
 // 떨어지는 발판 조각들 (칸마다 조금씩 시간차로 떨어진다)
 function drawCr(r,i){
   const a0=crAge(r)-CRD,sl=r.c+r.sc-r.sh,nt=Math.round(r.sh*2);
   for(let j=0;j<nt;j++){
-    const a=a0-j*.05,y=a>0?-16*a*a:0;
+    const a=a0-j*.1-hsh(i*3.1+j*1.7)*.14,y=a>0?-14*a*a:0;
     if(y<-14)continue;
-    box(sl+j+.04,sl+j+.96,i+.04,i+.96,y-.12,y,34,45,70);
+    box(sl+j+.04,sl+j+.96,i+.04,i+.96,y-.12,y,18,55,60);
   }
 }
 function drawGem(r,i){
@@ -710,7 +723,7 @@ function draw(){
         let h=H0,sa=30,l=isDrop?62:MP.tl;
         if(isPad){h=H0+75;sa=75;l=58}
         if(rt){h=12;sa=88;l=52}
-        if(r.cr){h=34;sa=45;l=70}
+        if(r.cr){const ag=crAge(r);h=ag>=0?18:34;sa=ag>=0?55:45;l=ag>=0?60:70}
         poly([pr(a,0,za),pr(b,0,za),pr(b,0,zb),pr(a,0,zb)],C(h,sa,l));
         poly([pr(a,0,za),pr(b,0,za),pr(b,-.12,za),pr(a,-.12,za)],C(h,sa,l-14));
       }
@@ -736,7 +749,7 @@ function draw(){
     });
     if(r.hams)r.hams.forEach(h=>drawHam(r,i,h));
     if(r.cr&&crAge(r)>=CRD)drawCr(r,i);
-    if(r.rk)r.rk.forEach(t=>{if(t.g.st===1)drawRk(r,i,t)});
+    if(r.rk)r.rk.forEach(t=>{if(t.g.st===1)drawRk(r,i,t);else if(t.g.st===0)rocketModel(r.c+t.x,i+.5,0)});
     if(hb[i])hb[i].forEach(q=>drawSpin(R[q[1]],q[1],q[0],q[2]));
     if(r.gem!=null&&!r.got)drawGem(r,i);
     if(i===pi)ball();
